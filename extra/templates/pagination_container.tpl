@@ -1,0 +1,1 @@
+<div id="pagination"><% param.pagination %></div>

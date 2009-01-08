@@ -1,0 +1,132 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "access_denied"
+msgstr "access denied"
+
+msgid "address"
+msgstr "address"
+
+msgid "all"
+msgstr "all"
+
+msgid "back"
+msgstr "back"
+
+msgid "cancel"
+msgstr "cancel"
+
+msgid "city"
+msgstr "city"
+
+msgid "country"
+msgstr "country"
+
+msgid "created_at"
+msgstr "created at"
+
+msgid "date"
+msgstr "date"
+
+msgid "day"
+msgstr "day"
+
+msgid "delete"
+msgstr "delete"
+
+msgid "edit"
+msgstr "edit"
+
+msgid "email"
+msgstr "email address"
+
+msgid "enabled"
+msgstr "enabled"
+
+msgid "firstname"
+msgstr "firstname"
+
+msgid "hour"
+msgstr "hour"
+
+msgid "item_created"
+msgstr "<% param.item %> created"
+
+msgid "item_updated"
+msgstr "<% param.item %> updated"
+
+msgid "language"
+msgstr "language"
+
+msgid "lastname"
+msgstr "lastname"
+
+msgid "login"
+msgstr "login"
+
+msgid "logout"
+msgstr "logout"
+
+msgid "minute"
+msgstr "minute"
+
+msgid "modified_at"
+msgstr "modified at"
+
+msgid "month"
+msgstr "month"
+
+msgid "name"
+msgstr "name"
+
+msgid "nickname"
+msgstr "nickname"
+
+msgid "offline"
+msgstr "offline"
+
+msgid "online"
+msgstr "online"
+
+msgid "password"
+msgstr "password"
+
+msgid "register"
+msgstr "register"
+
+msgid "save"
+msgstr "save"
+
+msgid "second"
+msgstr "second"
+
+msgid "text"
+msgstr "text"
+
+msgid "title"
+msgstr "title"
+
+msgid "user"
+msgstr "user"
+
+msgid "user_created_and_logged_in"
+msgstr "<% param.user %> created and logged in"
+
+msgid "user_logged_in"
+msgstr "<% param.user %> logged in"
+
+msgid "user_not_found"
+msgstr "user not found"
+
+msgid "users"
+msgstr "users"
+
+msgid "welcome"
+msgstr "welcome"
+
+msgid "wrong_password"
+msgstr "wrong password"
+
+msgid "year"
+msgstr "year"
+

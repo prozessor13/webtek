@@ -1,0 +1,76 @@
+===========================================================================
+
+WebTek installation instructions.
+
+First, install the system requirements. The easyest way is, to install 
+the binary packages provided by your linux distribution:
+
+   * perl >= 5.8
+   * apache2
+   * mod_perl2
+   * libapreq2
+   * mysql-server
+        * mysql-client
+   
+Next install the perl packages (e.g. via the cpan shell):
+   
+   * DBI
+   * DBD::mysql
+   * Date::Parse
+   * Date::Format
+   * JSON::XS (faster) or JSON (pure perl)
+   * MIME::Base64 (unless modperl2 installed)
+   * POE (only necessary for Comet)
+   
+Finally configure the database:
+   
+   * for mysql execute the extra/db/mysql.sql script
+
+Now WebTek is ready to run a first Application. To create this Application,
+simply call the webtek script in the WebTek directory.   
+
+   ./webtek Test
+   
+The following output should be displayed:   
+   
+   create WebTek app 'Test';
+
+   create files:
+     /WebTek/app/Test/Handler.pm
+     /WebTek/app/Test/Page/Root.pm
+     /WebTek/app/Test/config/db.config
+     /WebTek/app/Test/config/webtek.config
+     /WebTek/app/Test/templates/master.tpl
+     /WebTek/app/Test/messages/de.po
+     /WebTek/app/Test/messages/en.po
+     /WebTek/app/Test/webtek
+
+   and add this to your httpd.conf:
+
+   # init perl
+   PerlSwitches -I/WebTek/app
+   PerlSwitches -I/WebTek/lib
+   PerlRequire /WebTek/extra/startup.pl
+
+   # init static content
+   Alias /static/test /WebTek/static/Test
+   <Directory /WebTek/static/Test>
+      Order allow,deny
+      Allow from all
+   </Directory>
+
+   # init dynamic content
+   <Location /test>
+   SetHandler modperl
+   PerlAddVar name Test
+   PerlAddVar dir /WebTek/app/Test
+   PerlAddVar env dev
+   PerlResponseHandler Test::Handler
+   </Location>
+
+   now restart your webserver and load http://localhost/wiki
+
+ok, so let's restart your webserver, and enjoy...
+
+more information is under http://max.xaok.org/webtek. Currently only in 
+german, but an english version is available soon (i think before sep. 06).

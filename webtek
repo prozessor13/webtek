@@ -1,0 +1,152 @@
+#!/usr/bin/env perl
+
+use strict;
+
+unless (@ARGV) {
+   usage();
+   exit(1);
+}
+
+my $appname = $ARGV[0];
+
+#... check appdir
+if (-d "app/$appname" || -e "app/$appname") {
+   print "error: app/$appname allread exists\n";
+   exit(1);
+}
+
+#... check staticdir
+if (-d "static/$appname" || -e "static/$appname") {
+   print "error: static-dir static/$appname allread exists\n";
+   exit(1);
+}
+
+#... find appdir
+my @pwd = `pwd`;
+my $dir = $pwd[0];
+$dir =~ s/\\/\//g;
+chop $dir;
+my $appdir = "$dir/app";
+my $staticdir = "$dir/static";
+unless (-d $appdir) { mkdir $appdir or die $!; }
+unless (-d $staticdir) { mkdir $staticdir or die $!; }
+
+print "create WebTek app '$appname'\n\n";
+
+#... create appdir
+mkdir("$appdir/$appname") or die $!;
+mkdir("$staticdir/$appname") or die $!;
+system("chmod 777 $staticdir/$appname");
+
+#... create page / model / templates dirs
+mkdir("$appdir/$appname/Page") or die $!;
+mkdir("$appdir/$appname/Model") or die $!;
+mkdir("$appdir/$appname/templates") or die $!;
+mkdir("$appdir/$appname/templates/Root") or die $!;
+mkdir("$appdir/$appname/templates/others") or die $!;
+mkdir("$appdir/$appname/templates/others/pagination") or die $!;
+mkdir("$appdir/$appname/config") or die $!;
+mkdir("$appdir/$appname/messages") or die $!;
+mkdir("$appdir/$appname/static") or die $!;
+mkdir("$appdir/$appname/scripts") or die $!;
+mkdir("$appdir/$appname/scripts/test") or die $!;
+
+#... create standard modules and startup.pl
+print "create files:\n";
+copy("Handler.pm", "Handler.pm");
+copy("webtek.cgi", "scripts/webtek.cgi");
+copy("Root.pm", "Page/Root.pm");
+copy("appPage.pm", "Page/Page.pm");
+copy("db.config", "config/db.config");
+copy("cgi.config", "config/cgi.config");
+copy("db.migrate.config", "config/db.migrate.config");
+copy("webtek.config", "config/webtek.config");
+copy("webtek.dev.config", "config/webtek.dev.config");
+copy("cache.config", "config/cache.config");
+copy("numbers.config", "config/numbers.config");
+copy("mod_perl2.config", "config/mod_perl2.config");
+copy("master.tpl", "templates/others/master.tpl");
+copy("master.ajax.tpl", "templates/others/master.ajax.tpl");
+copy("master.json.tpl", "templates/others/master.json.tpl");
+copy("comet.tpl", "templates/others/comet.tpl");
+copy("index_root.tpl", "templates/Root/index.tpl");
+copy("de.po", "messages/de.po");
+copy("en.po", "messages/en.po");
+copy("prototype.js", "static/prototype.js");
+copy("webtek.css", "static/webtek.css");
+copy("webtek.js", "static/webtek.js");
+copy("pagination_container.tpl", "templates/others/pagination/container.tpl");
+copy("pagination_page.tpl", "templates/others/pagination/page.tpl");
+copy("pagination_actual_page.tpl", "templates/others/pagination/actual_page.tpl");
+copy("pagination_previous_page.tpl", "templates/others/pagination/previues_page.tpl");
+copy("pagination_next_page.tpl", "templates/others/pagination/next_page.tpl");
+copy("pagination_filler.tpl", "templates/others/pagination/filler.tpl");
+copy("webtek", "webtek"); system("chmod 755 $appdir/$appname/webtek");
+
+print "\nand add this to your httpd.conf:\n";
+http_conf();
+print "now restart your webserver and load http://localhost/".lc($appname)."\n";
+
+#... copy files
+sub copy {
+   my $infile = shift;
+   my $outfile = shift;
+   
+   my $file = "";
+   print "  $appdir/$appname/$outfile\n";
+   open (IN, "$appdir/../extra/templates/$infile") or die $!;
+   open (OUT, "> $appdir/$appname/$outfile") or die $!;
+   while (<IN>) {
+      s/\<\% dir \%\>/$dir/g;
+      s/\<\% appdir \%\>/$appdir/g;
+      s/\<\% staticdir \%\>/$staticdir/g;
+      s/\<\% appname \%\>/$appname/g;
+      s/\<\% appname_lower \%\>/lc($appname)/eg;   
+      print OUT;
+   }
+   close (IN);
+   close (OUT);
+}
+
+#... print httpd.conf part
+sub http_conf {
+
+my $lc_appname = lc($appname);
+print <<EOF
+
+# init perl
+PerlSwitches -I$dir/app
+PerlSwitches -I$dir/lib
+PerlRequire $dir/extra/startup.pl
+
+# init static content
+Alias /static/$lc_appname $staticdir/$appname
+<Directory $staticdir/$appname>
+   Order allow,deny
+   Allow from all
+</Directory>
+
+# init dynamic content
+<Location /$lc_appname>
+   SetHandler modperl
+   PerlAddVar name $appname
+   PerlAddVar dir $appdir/$appname
+   PerlAddVar env dev
+   PerlResponseHandler $appname\::Handler
+</Location>
+
+EOF
+
+}
+
+#... print usage
+sub usage {
+   
+print <<EOF
+this script creates the directory structur and some initial files
+for the web-framework 'WebTek'. enjoy.
+
+usage: ./webtek <app-name>
+EOF
+   
+}

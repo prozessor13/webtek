@@ -1,0 +1,93 @@
+#!/usr/bin/perl -I<% dir %>/lib -I<% dir %>/app
+
+$|++;
+use WebTek::Script;
+use WebTek::Globals;
+
+my $pre_modules = "";   # comma-separated list of pre-modules (optional)
+my $post_modules = "";  # comma-separated list of post-modules (optional)
+
+my %::args = parse_argv();
+my @::argv = @{$args{'argv'}};
+my $cmd = shift @argv;
+
+my $webtekdir = "<% dir %>";
+my $appname = $args{'name'} || '<% appname %>';
+my $appdir = $args{'dir'} || '<% appdir %>/<% appname %>';
+my $module = "/post-modules/$args{'post-module'}" if $args{'post-module'};
+$module = "/pre-modules/$args{'pre-module'}" if $args{'pre-module'};
+
+assert -d "$appdir$module", "Defined Module does not exist!";
+
+#... create log-level from string debug,info,warning,error,fatal
+my $log_level ||= $params{'log_level'} || $args{'log_level'} || 'info';
+$log_level = eval "WebTek::Logger::LOG_LEVEL_" . uc($log_level) . "()";
+
+#... init webtek-app
+do "<% dir %>/extra/startup.pl";
+WebTek::App->init(
+   'name' => $args{'name'} || $appname,
+   'dir' => $args{'dir'} || $appdir,
+   'env' => [ split ",", $args{'env'} ],
+   'log_level' => $log_level,
+   'pre-modules' => [ split ",", ($args{'pre-modules'} || $pre_modules) ],
+   'post-modules' => [ split ",", ($args{'post-modules'} || @post_modules) ],
+);
+WebTek::Loader->init('safe');
+
+#... exec command
+if ($cmd) {
+   $cmd =~ s/-/_/g;
+   eval {
+      assert WebTek::Script->can($cmd), "invalid command!";
+      &{'WebTek::Script::' . lc($cmd)}(
+         $webtekdir, $appname, $appdir, $module, \%::args, \@::argv
+      );
+   };
+   if ($@) {
+      my $msg = ref $@ && $@->isa('WebTek::Exception') ? $@->{'msg'} : $@;
+      print "[ERROR]: $msg\n";
+   }
+} else {
+   print usage();
+}
+
+
+# parse cmd line arguments
+sub parse_argv {
+   my %args = ( 'argv' => [] );
+   for (my $i=0; $i<@ARGV; $i++) {
+      if ($ARGV[$i] =~ /--(.*)/) {
+         $args{$1} = $ARGV[++$i];
+      } else {
+         push @{$args{'argv'}}, $ARGV[$i];
+      }
+   }
+   return %args;
+}
+
+#... print usage
+sub usage {
+   my $cmds = WebTek::Script::_info();
+
+   return <<EOF
+
+usage:
+   ./webtek <options> <command>
+
+options:
+   --name <appname>               -> sets the appname, default: $appname
+   --dir <appdir>                 -> sets the appdir, default: $appdir
+   --env <env,...>                -> sets the environment, default: none
+   --log_level <level>            -> sets the loglevel, default: info
+   --pre-modules <modulename,..>  -> sets the pre-modules loaded, default: all
+   --post-modules <modulename,..> -> sets the pre-modules loaded, default: all
+   --pre-module <modulename>      -> process the command in a pre-module
+   --post-module <modulename>     -> process the command in a post-module
+
+commands:
+$cmds
+
+EOF
+   
+}
