@@ -3,16 +3,17 @@ package WebTek::Event;
 # NOTE: this code is originally from adrian smith <adrian.m.smith@gmail.com>
 
 use strict;
+use WebTek::App qw( app );
 use WebTek::Util qw( assert );
 use WebTek::Logger qw( ALL );
 use WebTek::Exception;
 use WebTek::Export qw( event );
 
-our $SharedInstance;
+our %SharedInstance = ();
 
 sub new { bless { }, shift }
 
-sub event { $SharedInstance ||= __PACKAGE__->new }
+sub event { $SharedInstance{app->name} ||= __PACKAGE__->new }
 
 sub register {
    my ($self, %param) = @_;

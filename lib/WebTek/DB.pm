@@ -19,17 +19,22 @@ require WebTek::Config;
 
 our %SharedInstance = ();
 
-#... register notificatins
-event->register(
-   'name' => 'request-end',
-   'method' => sub{foreach(values %{$SharedInstance{app->name}}){$_->commit}},
-   'priority' => 10,
-);
-event->register(
-   'name' => 'request-had-errors',
-   'method' => sub{foreach(values %{$SharedInstance{app->name}}){$_->rollback}},
-   'priority' => 10,
-);
+sub _init {
+   event->register(
+      'name' => 'request-end',
+      'method' => sub {
+         $_->commit foreach values %{$SharedInstance{app->name}};
+      },
+      'priority' => 10,
+   );
+   event->register(
+      'name' => 'request-had-errors',
+      'method' => sub{
+         $_->rollback foreach values %{$SharedInstance{app->name}};
+      },
+      'priority' => 10,
+   );   
+}
 
 # ----------------------------------------------------------------------------
 # constants

@@ -14,7 +14,7 @@ use WebTek::Export qw( app );
 use base qw( WebTek::Handler );
 
 our $App;
-our %Modules;
+our %Apps;
 our $AUTOLOAD;
 
 make_accessor 'name', 'Macro';
@@ -31,14 +31,18 @@ sub app :Handler { $App or throw "App not initialized!" }
 sub _modules {
    my ($self, $type) = @_;   # e.g. pre or post
    
-   unless ($Modules{$type}{$self->name}) {
-      if (opendir(DIR, $self->dir . "/$type-modules")) {
-         $Modules{$type}{$self->name} = [ grep /^[^\.]/, sort(readdir(DIR)) ];
-         closedir(DIR);
-      }
-   }
+   if (opendir(DIR, $self->dir . "/$type-modules")) {
+      my $modules = [ grep /^[^\.]/, sort(readdir(DIR)) ];
+      closedir(DIR);
+      return $modules;
+   }   
+   return [];
+}
+
+sub activate {
+   my ($class, $name) = @_;
    
-   return $Modules{$type}{$self->name} ||= [];
+   $App = $Apps{$name};
 }
 
 sub init {
@@ -63,7 +67,11 @@ sub init {
    );
    $self->engine($params{'engine'});
    
-   return $App = $self;
+   #... set global accessable
+   $App = $Apps{$params{'name'}} = $self;
+   
+   #... init backend for app
+   WebTek::Loader->init;
 }
 
 sub dirs { [

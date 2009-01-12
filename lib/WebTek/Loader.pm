@@ -17,26 +17,26 @@ use WebTek::Message;
 use WebTek::Exception;
 
 our %Files = ();
-our %Init = ();
-
-#... do the automatic code-reload
-event->register(
-   'name' => 'request-begin',
-   'method' => sub {
-      timer_start('init loader');
-      init() unless $Init{app->name};
-      reload() if $Init{app->name} and config->{'code-reload'};
-      $Init{app->name} = 1;
-      timer_end('init loader');         
-   },
-   'priority' => 1,
-);
 
 sub reset { $Files{app->name} = {} }
 
 sub init {
    my ($class, $safe) = @_;    # may init modules safe (no die on error)	
-   
+
+   #... register code-reload event
+   event->register(
+      'name' => 'request-begin',
+      'priority' => 1,
+      'method' => sub {
+         WebTek::Util::stash({});
+         if (config->{'code-reload'}) {
+            timer_start('reload code');
+            reload();
+            timer_end('reload code');
+         }
+      },
+   );
+
    #... replace require to load WebTek Modules correctly
    my $prefix = app->class_prefix;
    *CORE::GLOBAL::require = sub {
@@ -57,10 +57,15 @@ sub init {
    my $files = files();
    load_configs($files, $safe);
    load_messages($files, $safe);
+
+   WebTek::Timing->_init;
+   WebTek::DB->_init;
    WebTek::Page->_init;
+
    my $session_class = config->{'session'}->{'class'};
    load($class, $session_class);
    $session_class->_init;
+
    load_perl_modules($files, $safe);
    merge_static_files($files, $safe);   
 }

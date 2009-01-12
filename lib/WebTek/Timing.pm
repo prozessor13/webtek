@@ -16,22 +16,24 @@ our $Timing;
 our $Indent;
 our $Active;
 
-event->register(
-   'name' => 'request-begin',
-   'method' => sub { &init; timer_start('request') },
-);
-event->register(
-   'name' => 'request-end',
-   'method' => sub { timer_end('request') },
-);
-event->register(
-   'name' => 'request-init-begin',
-   'method' => sub { timer_start('init request') },
-);
-event->register(
-   'name' => 'request-init-end',
-   'method' => sub { timer_end('init request') },
-);
+sub _init {
+   event->register(
+      'name' => 'request-begin',
+      'method' => sub { &init; timer_start('request') },
+   );
+   event->register(
+      'name' => 'request-end',
+      'method' => sub { timer_end('request') },
+   );
+   event->register(
+      'name' => 'request-init-begin',
+      'method' => sub { timer_start('init request') },
+   );
+   event->register(
+      'name' => 'request-init-end',
+      'method' => sub { timer_end('init request') },
+   );   
+}
 
 sub timer_start {
    return unless $Active;

@@ -22,8 +22,6 @@ make_accessor('_errors');
 make_accessor('_suppress_errors');
 make_accessor('has_errors', 'Public');
 
-event->register('name' => 'request-begin', 'method' => sub { stash({}) });
-
 # ---------------------------------------------------------------------------
 # constants
 # ---------------------------------------------------------------------------
@@ -118,7 +116,6 @@ sub _info :Action {
 
 sub _init {
    my $class = shift;
-   
    log_debug("$$: init page $class");
    
    #... extract code-attribute informations (for Path, Action Macro)
