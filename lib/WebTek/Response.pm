@@ -98,7 +98,7 @@ sub json {
    $self->header('X-JSON' => $json);
 }
 
-sub message_macro {
+sub message_macro :Macro {
    my ($self, %params) = @_;
    
    my $name = $params{'name'} || 'default';

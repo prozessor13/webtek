@@ -54,8 +54,8 @@ sub init {
    $self->name($params{'name'});
    $self->dir($params{'dir'});
    $self->env($params{'env'} || []);
-   $self->pre_modules($params{'pre-modules'} || $App->_modules('pre'));
-   $self->post_modules($params{'post-modules'} || $App->_modules('post'));
+   $self->pre_modules($params{'pre-modules'} || $self->_modules('pre'));
+   $self->post_modules($params{'post-modules'} || $self->_modules('post'));
    $self->class_prefix(substr $params{'dir'}, (rindex $params{'dir'}, "/") + 1);
    $self->log_level(defined $params{'log_level'}
       ? $params{'log_level'}
