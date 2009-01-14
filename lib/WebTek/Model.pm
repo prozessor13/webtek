@@ -155,9 +155,6 @@ sub has_a {
       $accessor = $name;
    }
 
-   #... check if accessor is already defined, if so do nothing
-   if ($Has_a{app->name}->{$class}->{$column}) { return }
-   
    #... find the model and constructor for the foreign-key
    unless ($model) {
       my $modelprefix = $class;
