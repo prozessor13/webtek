@@ -12,7 +12,7 @@ sub handler : method {
    r($r); # set as global accessable
    
    #... init application
-   WebTek::App->init(
+   WebTek::App->activate($r->dir_config('name')) or WebTek::App->init(
       'name' => $r->dir_config('name'),
       'dir' => $r->dir_config('dir'),
       'env' => [ split ",", $r->dir_config('env') ],

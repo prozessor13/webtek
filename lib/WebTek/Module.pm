@@ -21,10 +21,15 @@ sub load {
    #... remove all events
    event->remove_all_on_object($package) if $Loaded{$package};
 
-   #... remove old code #FIXME does this work?
+   #... remove old code (code stolen from Class::Unload)
    {
       no strict 'refs';
-      delete ${"$package::"}{$_} foreach (grep { /\w$/ } keys %{"$package::"});
+      @{$package . '::ISA'} = ();
+      my $symtab = $package . '::';
+      foreach my $symbol (keys %$symtab) {
+         next if substr($symbol, -2, 2) eq '::';
+         delete $symtab->{$symbol};
+      }
    }
    
    #... create filename from packagename

@@ -67,7 +67,7 @@ sub init {
    $session_class->_init;
 
    load_perl_modules($files, $safe);
-   merge_static_files($files, $safe);   
+   merge_static_files($files, $safe);
 }
 
 sub reload {

@@ -100,6 +100,7 @@ sub script :Info(script <filename> -> starts a script for this app) {
    assert $argv->[0], "no script-filename defined!";
    my $file = app->dir . '/' . $argv->[0];
    assert -e $file, "script-filename not exists!";
+   shift @::argv;
    assert(
       WebTek::Module->do($file),
       "error during script, details: $@, $!"

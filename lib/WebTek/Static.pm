@@ -33,10 +33,18 @@ sub merge_static_file {
    }
    
    #... copy files
+   my @time = (0, 0);
    foreach my $src (grep -e, map "$_/static/$file", @{app->dirs}) {
+      #... check modifytime
+      my @t = (stat($src))[8,9];
+      @time = @t if $t[1] > $time[1];
+      #... copy file
       WebTek::Util::copy($src, "$static/$file");
       chmod 0777, "$static/$file";
    }
+
+   #... set modify time to the newest file 
+   utime @time, "$static/$file";
 
    event->notify('static-file-copied', "$static/$file");
 }

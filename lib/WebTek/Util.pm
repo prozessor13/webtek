@@ -53,18 +53,6 @@ sub copy {
    while(<SRC>) { print DEST }
    close(DEST);
    close(SRC);
-
-   # Set dest file to have same timestamp as source file.
-   # Otherwise:
-   #   1. static file altered (but not yet uploaded to server)
-   #   2. webserver restart + copy old static files
-   #   3. upload static file,
-   #   4. webserver restart
-   # Step 2 must preserve the older datestamp of the old static file otherwise
-   # step 4 will not notice that a newer static file has been uploaded.
-   #
-   ($atime, $mtime) = (stat($src))[8,9];
-   utime $atime, $mtime, $dest;
 }
 
 sub find {

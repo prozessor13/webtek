@@ -71,7 +71,7 @@ sub init {
    $App = $Apps{$params{'name'}} = $self;
    
    #... init backend for app
-   WebTek::Loader->init;
+   WebTek::Loader->init($params{'loader'});
 }
 
 sub dirs { [
