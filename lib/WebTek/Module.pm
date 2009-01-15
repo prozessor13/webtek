@@ -22,15 +22,15 @@ sub load {
    event->remove_all_on_object($package) if $Loaded{$package};
 
    #... remove old code (code stolen from Class::Unload)
-   {
-      no strict 'refs';
-      @{$package . '::ISA'} = ();
-      my $symtab = $package . '::';
-      foreach my $symbol (keys %$symtab) {
-         next if substr($symbol, -2, 2) eq '::';
-         delete $symtab->{$symbol};
-      }
-   }
+   # {
+   #    no strict 'refs';
+   #    @{$package . '::ISA'} = ();
+   #    my $symtab = $package . '::';
+   #    foreach my $symbol (keys %$symtab) {
+   #       next if substr($symbol, -2, 2) eq '::';
+   #       delete $symtab->{$symbol};
+   #    }
+   # }
    
    #... create filename from packagename
    my $fname = $package;

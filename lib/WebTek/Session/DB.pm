@@ -25,7 +25,7 @@ event->register('name' => 'request-end', 'method' => 'cleanup');
 sub _macro { # HACK because of multiple inheritance
    my ($self, $name) = @_;
 
-   return $self->SUPER::_macro($name) || $self->data->{$name}
+   return eval { $self->SUPER::_macro($name) } || $self->data->{$name};
 }
 
 # --------------------------------------------------------------------------

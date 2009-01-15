@@ -105,7 +105,7 @@ sub expand { $_[0]->create_time(date('now')) }
 sub _macro {
    my ($self, $name) = @_;
 
-   return $self->SUPER::_macro($name) || $self->data->{$name}
+   return eval { $self->SUPER::_macro($name) } || $self->data->{$name};
 }
 
 sub AUTOLOAD {

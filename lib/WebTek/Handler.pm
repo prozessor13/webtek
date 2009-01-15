@@ -36,7 +36,7 @@ sub _macro {
    my ($self, $name, $params) = @_;
    
    my $coderef = $self->can_macro($name) or throw "$self has no macro '$name'";
-   return $coderef && $coderef->($self, %$params) if $coderef;
+   return $coderef && $coderef->($self, %$params);
 }
 
 sub _filter {
