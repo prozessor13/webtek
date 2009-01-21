@@ -63,7 +63,9 @@ sub new {
    
    my $self = $class->SUPER::new;
    $self->_errors({});
-   $self->parent($WebTek::Dispatcher::CurrentPage);
+   if ($WebTek::Dispatcher::CurrentPage) {
+      $self->parent($WebTek::Dispatcher::CurrentPage);      
+   }
    event->notify("$class-created", $self);
    
    return $self;
