@@ -23,7 +23,7 @@ sub new {
 
    #... create the object from a JSON string
    my $ref = eval { decode_json_or_die(encode_utf8($struct)) };
-   assert $ref, "$struct is not a valid JSON string '$@'";
+   assert $ref, "$struct is not a valid JSON string: ".(ref $@ ? $@->msg : $@);
    return ref $ref ? bless $ref, $class : bless \$ref, $class;
 }
 
