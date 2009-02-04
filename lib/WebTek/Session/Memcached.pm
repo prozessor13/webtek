@@ -20,7 +20,12 @@ sub _init { }
 sub new {
    my ($class, %params) = @_;
    
-   return bless \%params, $class;
+   my $self = $class->SUPER::new;
+   $self->id($params{'id'});
+   $self->data($params{'data'});
+   $self->create_time($params{'create_time'});
+   $self->ip_address($params{'ip_address'});
+   return $self;
 }
 
 sub find_one {
