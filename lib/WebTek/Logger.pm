@@ -5,9 +5,9 @@ package WebTek::Logger;
 #
 # do the logging stuff
 
-use strict;
-use WebTek::App qw( app );
 use WebTek::Exception;
+use WebTek::App qw( app );
+use Date::Format qw( time2str );
 use WebTek::Export qw( log_debug log_info log_warning log_error log_fatal );
 
 sub LOG_LEVEL_FATAL { 4 }
@@ -22,6 +22,13 @@ sub log_warning { &log(LOG_LEVEL_WARNING, $_[0]) }
 sub log_error { &log(LOG_LEVEL_ERROR, $_[0]) }
 sub log_fatal { &log(LOG_LEVEL_ERROR, $_[0]); throw $_[0] }
 
+my $FH = STDERR;
+
+sub file {
+   my ($class, $fname) = @_;
+   open $FH, ">> $fname" or log_error "cannot open logfile '$fname', $!";
+}
+
 sub log {
    my ($level, $msg) = @_;
    
@@ -33,8 +40,9 @@ sub log {
    if (app->engine) {
       app->engine->log($level, $msg);
    } else {
+      my $time = time2str("%Y-%m-%d %H:%M:%S", time);
       $level = (qw( debug info warning error fatal ))[$level];
-      warn "[$level] $msg\n";
+      print $FH "[$time] [$level]: $msg\n";
    }
 }
 
