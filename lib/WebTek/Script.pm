@@ -259,11 +259,12 @@ sub migrate
    } elsif ($cmd eq 'history') {
       print join("\n", $history->()) . "\n";
    } elsif ($cmd eq 'create') {
-      my $m = $args->{'module'};
       my $t = date('now')->to_string('format' => "%Y%m%d%H%M%S");
-      my $fname = $fname->($m ? "$t\_$argv->[1].pl\@$m" : "$t\_$argv->[1].pl");
-      assert($fname, "no valid name defined!");
-      _copy(@_, "Migration.pl", $fname);
+      my $filename = $fname->("$t\_$argv->[1].pl");
+      $filename = $fname->("$t\_$argv->[1].pl\@$1:$2")         
+         if $module =~ /\/(pre|post)-modules\/(.+)/;
+      assert($filename, "no valid name defined!");
+      _copy(@_, "Migration.pl", $filename);
    }
 }
 
