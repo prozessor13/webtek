@@ -40,13 +40,16 @@ sub dispatch {
    
    #... create page structure
    timer_start("generate pages");
-   my ($path, $action, $format) =
-      $class->process_path($class->decode_url(request->path_info), $root);
-   my $page = $path->[-1];
+   request->path(WebTek::Request::Path->new);
+   my ($path, $action, $format) = $class->process_path(
+      $class->decode_url(request->path_info),
+      $root,
+      request->path,
+   );
+   my $page = $path->page;
    timer_end("generate pages");
 
    #... remember things in request
-   request->path($path);
    request->page($page);
    request->action($action);
    request->format($format) if $format;
@@ -54,8 +57,7 @@ sub dispatch {
    #... call the action
    event->notify('before-request-action', $page);
    event->notify(ref($page) . "-before-action-$action", $page);
-   if ($page->can_rest($action)) {
-      request->can_rest(1);
+   if ($action eq 'index' and $page->can_rest) {
       &_process_rest_request;
    } else {
       &_process_normal_request;
@@ -66,15 +68,16 @@ sub dispatch {
 }
 
 sub process_path {
-   my ($class, $path, $page) = @_;
+   my ($class, $path_info, $page, $path) = @_;
    
-   my @path = ($page);
+   $path = $path || WebTek::Request::Path->new;
+   push @$path, $page;
    my $action = "index";
    my $format = '';
    #... process path
-   PATH: while ($path and $path ne '/') {
+   PATH: while ($path_info and $path_info ne '/') {
       #... check for an action
-      if ($path =~ /^\/([^\/]+?)(\.(\w+))?$/ and $page->can_action($1)) {
+      if ($path_info =~ /^\/([^\/]+?)(\.(\w+))?$/ and $page->can_action($1)) {
          $action = $1;
          $format = $3;
          last;
@@ -82,7 +85,7 @@ sub process_path {
       #... check for a childpage
       foreach my $info (@{$page->_child_paths}) {
          my ($childpage, $constructor, $p, $regexp) = @$info;
-         if (my @match = $path =~ /$regexp/) {
+         if (my @match = $path_info =~ /$regexp/) {
             # create child with matching path-part
             $WebTek::Dispatcher::CurrentPage = $page;
             my $child = $childpage->$constructor(@match);
@@ -90,8 +93,8 @@ sub process_path {
                $child->parent($page);
                $page = $child;
                $child_path =~ s/(\W)/'\x{'.sprintf("%02x", ord($1)).'}'/eg;
-               $path =~ s/\/?$child_path//;   # remove path-part
-               push @path, $page;
+               $path_info =~ s/\/?$child_path//;   # remove path-part
+               push @$path, $page;
                next PATH;
             }
          }
@@ -102,7 +105,7 @@ sub process_path {
    }
 
    $WebTek::Dispatcher::CurrentPage = undef;
-   return (WebTek::Request::Path->new(\@path), $action, $format);
+   return ($path, $action, $format);
 }
 
 # --------------------------------------------------------------------------
@@ -181,16 +184,13 @@ sub _process_normal_request {
 sub _process_rest_request {
    my $page = request->page;
    my $action = request->action;
-   my $rest_action = "$action\_" . request->method;
+   my $rest_action = lc(request->method);
+   response->format(request->format || 'json');
    
    #... call action save
    timer_start("process rest action");
    eval {
-      if ($page->check_access('action' => $action)
-          and $page->check_access('action' => $rest_action)
-      ) {
-         #... may do some preprocessing
-         $page->$action();
+      if ($page->check_access('action' => $rest_action)) {
          #... call rest action
          if ($page->can_action($rest_action)) {
             $page->$rest_action();
