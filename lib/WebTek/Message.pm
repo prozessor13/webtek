@@ -7,7 +7,6 @@ use strict;
 use WebTek::App qw( app );
 use WebTek::Util qw( assert );
 use WebTek::Logger qw( ALL );
-use WebTek::GetText;
 use WebTek::Exception;
 
 our %Messages = ();
@@ -58,17 +57,57 @@ sub load {
       push @files, @f;      
    }
    
-   #... get existing messages
-   my $msgs = $Messages{app->name} && $Messages{app->name}->{$language} || {};
-
    #... load message-files
+   my $msgs = {};
    foreach my $file (@files) {
       log_debug("load message $file");
-      $msgs = { %$msgs, %{WebTek::GetText::read_po($file)} };
+      $msgs = { %$msgs, %{read_po($file)} };
    }
       
    #... remember messages
    $Messages{app->name}->{$language} = $msgs;
+}
+
+sub read_po {   
+   my $file = shift;
+   
+   sub _unescape {   #... unescape \n,\r,\t
+      my $string = shift;
+      $string =~ s/\\n/\n/g;
+      $string =~ s/\\r/\r/g;
+      $string =~ s/\\t/\t/g;
+      $string =~ s/\\"/"/g;
+      return $string;
+   }
+      
+   my ($msgs, $infos, $lineno, $state, $key, $value) = ({}, {});
+   foreach my $line (split /\n/, slurp($file)) {
+      $lineno++;
+      next if ($line =~ /^#/);            # ignore comments
+      next if ($line =~ /^\s*$/);         # empty lines
+      if (defined $value and $line =~ /^"(.*)"$/) {   # multiline
+         $value .= $1;
+      } elsif ($line =~ /^msgid\s*"(.*)"$/) {
+         my $new_value = $1;
+         if ($state eq "value") {
+            $msgs->{_unescape($key)} = _unescape($value);
+            $infos->{_unescape($key)} = $lineno;
+         }
+         $key = $value = $new_value;
+         $state = "key";
+      } elsif ($state eq "key" and $line =~ /^msgstr(\[0\])?\s*"(.*)"$/) {
+         $key = $value;
+         $value = $2;
+         $state = "value";
+      } else { warn "cannot parse line $lineno in $file" }
+   }
+   #... store last key
+   if ($state eq "value") {
+      $msgs->{_unescape($key)} = _unescape($value);
+      $infos->{_unescape($key)} = $lineno;
+   }
+   
+   return wantarray ? ($msgs, $infos) : $msgs;
 }
 
 1;

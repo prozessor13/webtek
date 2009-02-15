@@ -7,10 +7,11 @@ package WebTek::Config;
 
 use strict;
 use WebTek::App qw( app );
-use WebTek::Util qw( assert slurp );
+use WebTek::Util qw( assert );
 use WebTek::Logger qw( ALL );
 use WebTek::Exception;
 use WebTek::Data::Struct  qw( struct );
+use WebTek::Util::File qw( slurp );
 use WebTek::Export qw( config );
 
 our %Config = ();

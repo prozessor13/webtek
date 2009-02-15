@@ -205,12 +205,18 @@ sub column_info {
    #... postgres outputs the names somtimes in qotes (why?)
    sub _clean { my $name = shift; $name =~s /\W//g; return $name }
 
+   #... return either uppercase or lowercase key
+   sub _get {
+      my ($hash, $key) = @_;
+      return exists $hash->{uc $key} ? $hash->{uc $key} : $hash->{lc $key};
+   }
+
    #... fetch column info from db
    my $sth = $self->dbh->column_info(
       $self->catalog, $self->schema, $table, '%'
    ) or throw $self->dbh->errstr;
    my $rows = $sth->fetchall_arrayref({});
-   if ($sth->err) { throw $sth->err }
+   throw $sth->err if $sth->err;
    
    #... create column info for a model
    my @columns = ();
@@ -218,24 +224,12 @@ sub column_info {
       my $table_name = _clean($row->{'TABLE_NAME'} || $row->{'table_name'});
       next unless ($table_name eq $table);
       push @columns, {
-         'pos' => (exists $row->{'ORDINAL_POSITION'}
-            ? $row->{'ORDINAL_POSITION'}
-            : $row->{'ordinal_position'}),
-         'name' => _clean(lc(exists $row->{'COLUMN_NAME'}
-            ? $row->{'COLUMN_NAME'}
-            : $row->{'column_name'})),
-         'type' => lc(exists $row->{'TYPE_NAME'}
-            ? $row->{'TYPE_NAME'}
-            : $row->{'type_name'}),
-         'length' => (exists $row->{'COLUMN_SIZE'}
-            ? $row->{'COLUMN_SIZE'}
-            : $row->{'column_size'}),
-         'nullable' => (exists $row->{'NULLABLE'}
-            ? $row->{'NULLABLE'}
-            : $row->{'nullable'}),
-         'default' => (exists $row->{'COLUMN_DEF'}
-            ? $row->{'COLUMN_DEF'}
-            : $row->{'column_def'}),
+         'pos' => _get 'ordinal_position',
+         'name' => _clean(lc(_get 'column_name')),
+         'type' => lc(_get 'type_name'),
+         'length' => _get 'column_size',
+         'nullable' => _get 'nullable',
+         'default' => _get 'column_def',
          'mysql_is_pri_key' => $row->{'mysql_is_pri_key'},
       };
    }
@@ -249,11 +243,9 @@ sub last_insert_id {
    my $id = $self->dbh->last_insert_id(
       $self->catalog, $self->schema, $table, $column
    );
-   if ( ! defined($id)) {
-      # This is necessary on Emerion Web Hosting.
-      # I have no idea why.
-      $id = $self->dbh->{'mysql_insertid'};
-   }
+   # This is necessary on Emerion Web Hosting, I have no idea why.
+   $id = $self->dbh->{'mysql_insertid'} unless defined $id;
+
    return $id;
 }
 
@@ -269,16 +261,13 @@ For MySQL this is a number like "1" or "2".
 
 package WebTek::DB::UniqueConstraintViolatedException;
 
+use base qw( WebTek::Exception );
 use WebTek::Util qw( make_accessor );
-
-our @ISA = qw( WebTek::Exception );
 
 make_accessor('constraint_name');
 
 sub create {
-   my $class_or_self = shift;
-   my $msg = shift;
-   my $constraint_name = shift;
+   my ($class_or_self, $msg, $constraint_name) = @_;
 
    my $self = $class_or_self->SUPER::create($msg);
    $self->{'constraint_name'} = $constraint_name;

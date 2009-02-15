@@ -7,30 +7,29 @@ package WebTek::Module;
 
 use strict;
 use WebTek::App qw( app );
-use WebTek::Util qw( slurp );
-use WebTek::Event qw( event );
 use WebTek::Logger qw( ALL );
+use WebTek::Event qw( event );
+use WebTek::Util::File qw( slurp );
 
 our %Loaded = ();
 
 sub load {
    my ($class, $package) = @_;
-   
    log_debug("load perl module $package");
    
    #... remove all events
    event->remove_all_on_object($package) if $Loaded{$package};
 
    #... remove old code (code stolen from Class::Unload)
-   # {
-   #    no strict 'refs';
-   #    @{$package . '::ISA'} = ();
-   #    my $symtab = $package . '::';
-   #    foreach my $symbol (keys %$symtab) {
-   #       next if substr($symbol, -2, 2) eq '::';
-   #       delete $symtab->{$symbol};
-   #    }
-   # }
+   {
+      no strict 'refs';
+      @{$package . '::ISA'} = ();
+      my $symtab = $package . '::';
+      foreach my $symbol (keys %$symtab) {
+         next if substr($symbol, -2, 2) eq '::';
+         delete $symtab->{$symbol};
+      }
+   }
    
    #... create filename from packagename
    my $fname = $package;
@@ -52,10 +51,7 @@ sub load {
       }
 
       #... may init module
-      $package->_init
-         if $package->can('_INIT')
-         and $package->_INIT
-         and $package->can('_init');
+      $package->_init if $package->can('_init');
    }
 
    #... remember that the module is already loaded

@@ -15,7 +15,6 @@ use base qw( WebTek::Handler );
 
 our $App;
 our %Apps;
-our $AUTOLOAD;
 
 make_accessor 'name', 'Macro';
 make_accessor 'dir', 'Macro';

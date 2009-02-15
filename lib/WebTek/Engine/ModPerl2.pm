@@ -81,7 +81,6 @@ sub prepare {
    ) } map { $req->upload($_) } $req->upload });
 
    WebTek::Response->init;
-   config->{'session'}->{'class'}->init;
 }
 
 sub dispatch {

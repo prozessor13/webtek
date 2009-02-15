@@ -16,7 +16,7 @@ require WebTek::Response;
 require WebTek::Session;
 require WebTek::Util;
 require WebTek::Loader;
-require WebTek::Html;
+require WebTek::Util::Html;
 require WebTek::Model;
 require WebTek::Attributes;
 require WebTek::Exception;

@@ -8,6 +8,7 @@ package WebTek::Parent;
 use strict;
 use WebTek::Util;
 use WebTek::Module;
+use WebTek::Attributes;
 
 our %Children = ();
 our %Parent = ();
@@ -23,15 +24,18 @@ sub import {
    $class->set_parents($caller, @parents);
    #... create public methods from parents
    foreach my $parent (@parents) {
-      foreach (@{$parent->_public}) {
-         my ($name, $attributes) = @$_;
-         #... remove attributes which contains code
-         my @a = grep { not /Cache|CheckAccess/ } @$attributes;
-         #... create a method which points to the parent's page method
-         WebTek::Util::may_make_method($caller, $name, sub {
-            my $self = shift;
-            return $self->parent->$name(@_);
-         }, @a);
+      foreach (@{WebTek::Attributes->attributes_for_class($parent)}) {
+         my ($coderef, $attributes) = @$_;
+         if (grep { /Public/ } @$attributes) {
+            my $name = WebTek::Util::subname_for_coderef($parent, $coderef);
+            #... remove attributes which contains code
+            my @a = grep { not /Cache|CheckAccess/ } @$attributes;
+            #... create a method which points to the parent's page method
+            WebTek::Util::may_make_method($caller, $name, sub {
+               my $self = shift;
+               return $self->parent->$name(@_);
+            }, @a);
+         }
       }
    }
 }
