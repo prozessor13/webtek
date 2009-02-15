@@ -1,14 +1,15 @@
 #!/usr/bin/perl -I<% dir %>/lib -I<% dir %>/app
 
 $|++;
-use WebTek::Script;
 use WebTek::Globals;
+use WebTek::Util::Script;
+binmode STDOUT, 'utf8';
 
 my $pre_modules = "";   # comma-separated list of pre-modules (optional)
 my $post_modules = "";  # comma-separated list of post-modules (optional)
 
-my %::args = parse_argv();
-my @::argv = @{$args{'argv'}};
+%::args = parse_argv();
+@::argv = @{$args{'argv'}};
 my $cmd = shift @argv;
 
 my $webtekdir = "<% dir %>";
@@ -38,8 +39,8 @@ WebTek::App->init(
 if ($cmd) {
    $cmd =~ s/-/_/g;
    eval {
-      assert WebTek::Script->can($cmd), "invalid command!";
-      &{'WebTek::Script::' . lc($cmd)}(
+      assert WebTek::Util::Script->can($cmd), "invalid command!";
+      &{'WebTek::Util::Script::' . lc($cmd)}(
          $webtekdir, $appname, $appdir, $module, \%::args, \@::argv
       );
    };
@@ -67,7 +68,7 @@ sub parse_argv {
 
 #... print usage
 sub usage {
-   my $cmds = WebTek::Script::_info();
+   my $cmds = WebTek::Util::Script::_info();
 
    return <<EOF
 

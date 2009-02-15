@@ -68,6 +68,7 @@ copy("mod_perl2.config", "config/mod_perl2.config");
 copy("master.tpl", "templates/others/master.tpl");
 copy("master.ajax.tpl", "templates/others/master.ajax.tpl");
 copy("master.json.tpl", "templates/others/master.json.tpl");
+copy("master.error.tpl", "templates/others/master.error.tpl");
 copy("comet.tpl", "templates/others/comet.tpl");
 copy("index_root.tpl", "templates/Root/index.tpl");
 copy("de.po", "messages/de.po");
