@@ -1,5 +1,3 @@
-use WebTek::Export qw( link );
-
 sub link :Macro
    :Param(href="xyz" link destination)
    :Param(display="xyz" link display name)

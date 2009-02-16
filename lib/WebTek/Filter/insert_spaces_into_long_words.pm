@@ -1,5 +1,3 @@
-use WebTek::Export qw( insert_spaces_into_long_words );
-
 sub insert_spaces_into_long_words :Filter :Public
    :Param("sometimes you don't want '...' but still want text to ")
    :Param("  format nicely in a not-too-wide block")

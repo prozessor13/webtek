@@ -11,6 +11,7 @@ use WebTek::Event qw( event );
 use WebTek::Util qw( assert );
 use WebTek::Config qw( config );
 use WebTek::Logger qw( ALL );
+use WebTek::Util::File qw( copy );
 use WebTek::Exception;
 
 sub merge_static_file {
@@ -39,7 +40,7 @@ sub merge_static_file {
       my @t = (stat($src))[8,9];
       @time = @t if $t[1] > $time[1];
       #... copy file
-      WebTek::Util::copy($src, "$static/$file");
+      WebTek::Util::File::copy($src, "$static/$file");
       chmod 0777, "$static/$file";
    }
 

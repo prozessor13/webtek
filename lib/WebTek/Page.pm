@@ -11,9 +11,11 @@ use WebTek::Util qw( assert make_accessor make_method );
 use WebTek::Util::File qw( slurp );
 use WebTek::Util::Html qw( ALL );
 use WebTek::Filter qw( ALL );
+use WebTek::Macro;
 use WebTek::Globals;
 use WebTek::Message;
 use WebTek::Compiler;
+use WebTek::Exception;
 use Encode qw( encode_utf8 );
 use Digest::MD5 qw( md5_hex );
 use base qw( WebTek::Handler );
@@ -202,7 +204,7 @@ sub do_action {
          } elsif ($error->isa('WebTek::Exception::ObjInvalid')) {
             $self->has_errors(1);
             $self->_errors({%{$self->_errors}, %{$error->obj->_errors}});
-            log_debug("$self: ObjInvalid Exception: " . $page->errors);
+            log_debug "$self: ObjInvalid Exception: " . $self->errors;
             if (request->is_post and not request->can_rest) {
                request->method('GET');
                $self->do_action($action);
@@ -213,7 +215,7 @@ sub do_action {
          } else {
             throw $error;
          }
-      }
+      };
       throw "error in page $self and $action: $@" if $@;
    }
    
@@ -440,7 +442,7 @@ sub message :Macro
    my ($self, %params) = @_;
    
    #... find language for request
-   $params{'language'} ||= session->language || request->language;
+   $params{'language'} ||= request->language;
    #... render message
    my $key = WebTek::Cache::key($params{'language'}, $params{'key'});
    my $compiled = $Messages{ref $self}{$key};

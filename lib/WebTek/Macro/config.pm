@@ -1,5 +1,3 @@
-use WebTek::Export qw( config_macro );
-
 sub config_macro :Macro 
    :Info(render a value from an configfile)
    :Param(name="db" optional, default: webtek)

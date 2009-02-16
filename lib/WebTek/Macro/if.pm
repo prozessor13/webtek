@@ -1,5 +1,3 @@
-use WebTek::Export qw( if_macro );
-
 sub if_macro :Macro
    :Param(render param yes or no, as of the result of the condition)
    :Param(condition="some value")

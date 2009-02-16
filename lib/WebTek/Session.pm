@@ -41,15 +41,18 @@ sub init {
          'id' => $id,
          'ip_address' => request->remote_ip,
       );
-      if ($session && !$session->is_expired) {
+      if ($session and not $session->is_expired) {
          $session->expand;
          # may set messages (from previous request) to response
          if (defined $session->messages) {
             WebTek::Response::response()->messages($session->messages);
             $session->messages(undef);
          }
+         # may set request language
+         my $request = WebTek::Request::request();
+         $request->language($session->language);
          # may set no_cache info (from previous request) to request
-         WebTek::Request::request()->no_cache($session->no_cache);
+         $request->no_cache($session->no_cache);
          $session->no_cache(undef);
          return $Session = $session;
       } elsif ($session) {

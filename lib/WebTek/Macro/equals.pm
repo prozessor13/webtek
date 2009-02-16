@@ -1,5 +1,3 @@
-use WebTek::Export qw( equals_macro );
-
 sub equals_macro :Macro 
    :Info(equals to values and returns the strings 0 or 1)
    :Param(value1="abc")

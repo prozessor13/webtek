@@ -1,5 +1,3 @@
-use WebTek::Export qw( code );
-
 sub code :Macro
    :Info(executes perlcode and prints the result in the template)
    :Param(eval="some perl code")

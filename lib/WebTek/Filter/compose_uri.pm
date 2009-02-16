@@ -1,5 +1,3 @@
-use WebTek::Export qw( compose_uri );
-
 sub compose_uri {
    my ($handler, $uri, $params) = @_;
    

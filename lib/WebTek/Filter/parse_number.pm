@@ -1,5 +1,3 @@
-use WebTek::Export qw( parse_number );
-
 sub parse_number :Filter {
    my ($handler, $number, $params) = @_;
    

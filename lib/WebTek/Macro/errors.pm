@@ -1,5 +1,3 @@
-use WebTek::Export qw( errors );
-
 sub errors :Macro
    :Info(prints the errors of the page)
    :Param(separator="&lt;br /&gt;" define the separator between each error-msg (optional))

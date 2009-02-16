@@ -1,5 +1,3 @@
-use WebTek::Export qw( space_to_nbsp );
-
 sub space_to_nbsp :Filter {
    my ($handler, $string, $params) = @_;
    

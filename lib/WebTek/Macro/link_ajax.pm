@@ -1,5 +1,3 @@
-use WebTek::Export qw( link_ajax );
-
 sub link_ajax :Macro
    :Param(calls a link with an ajax request)
    :Param(href="xyz" link destination)

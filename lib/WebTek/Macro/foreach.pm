@@ -1,5 +1,3 @@
-use WebTek::Export qw( foreach_macro );
-
 sub foreach_macro :Macro
    :Info(render a template for each item in a list)
    :Param(list="<% some_list %>")

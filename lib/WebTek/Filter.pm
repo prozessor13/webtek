@@ -6,6 +6,7 @@ package WebTek::Filter;
 # load a filter during runtime
 
 use strict;
+use WebTek::Logger qw( log_error );
 
 sub import {
    my ($class, @names) = @_;

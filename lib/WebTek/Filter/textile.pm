@@ -1,5 +1,4 @@
 use Text::Textile;
-use WebTek::Export qw( textile );
 
 sub textile :Filter {
    my ($handler, $string, $params) = @_;

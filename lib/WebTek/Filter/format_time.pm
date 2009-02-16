@@ -1,5 +1,3 @@
-use WebTek::Export qw( format_time );
-
 sub format_time :Filter {
    my ($handler, $time, $params) = @_;
 

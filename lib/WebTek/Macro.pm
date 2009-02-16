@@ -6,6 +6,7 @@ package WebTek::Macro;
 # load a macro during runtime
 
 use strict;
+use WebTek::Logger qw( log_error );
 
 sub import {
    my ($class, @names) = @_;
@@ -18,6 +19,8 @@ sub load {
    my ($class, $name, $caller) = @_;
    $caller ||= caller;
    
+   my $x = eval "use WebTek::Macro::$name; 1";
+   print "use WebTek::Macro::$name; 1: $x\n";
    if (eval "use WebTek::Macro::$name; 1") {
       $name = "$name\_macro" if $class->can("$name\_macro");
       $class->init($name, $class->can($name), $caller);
@@ -28,6 +31,7 @@ sub load {
 
 sub init {
    my ($class, $name, $coderef, $caller) = @_;
+   $caller ||= caller;
    my $attributes = WebTek::Attributes->attributes->{$coderef};
    
    #... create wrapper for macro print output
@@ -57,7 +61,7 @@ sub init {
    }
    
    #... save new macro mehtod
-   WebTek::Util::make_method($class, $name, $wrapper, @$attributes);
+   #WebTek::Util::make_method($caller, $name, $wrapper, @$attributes);
 }
 
 1;

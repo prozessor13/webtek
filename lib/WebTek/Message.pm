@@ -7,6 +7,7 @@ use strict;
 use WebTek::App qw( app );
 use WebTek::Util qw( assert );
 use WebTek::Logger qw( ALL );
+use WebTek::Util::File qw( slurp );
 use WebTek::Exception;
 
 our %Messages = ();

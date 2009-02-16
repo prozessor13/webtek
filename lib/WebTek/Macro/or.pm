@@ -1,5 +1,3 @@
-use WebTek::Export qw( or_macro );
-
 sub or_macro :Macro 
    :Param(combine two values with logical or)
    :Param(value1="abc")

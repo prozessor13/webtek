@@ -1,5 +1,4 @@
 use Encode qw( encode );
-use WebTek::Export qw( charset );
 
 sub charset :Filter {
    my ($handler, $string, $params) = @_;

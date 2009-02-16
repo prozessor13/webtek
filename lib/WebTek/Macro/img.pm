@@ -1,5 +1,3 @@
-use WebTek::Export qw( img );
-
 sub img :Macro :Param(renders an image tag) {
    my ($self, %params) = @_;
    

@@ -1,5 +1,3 @@
-use WebTek::Export qw( pagination );
-
 sub pagination :Macro
    :Param(render the pagination navigation)
    :Param(container="tplname" optional tplname for the container)

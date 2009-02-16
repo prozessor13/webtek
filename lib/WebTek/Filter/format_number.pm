@@ -1,5 +1,3 @@
-use WebTek::Export qw( format_number );
-
 sub format_number :Filter {
    my ($handler, $number, $params) = @_;
 

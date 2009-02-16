@@ -1,5 +1,3 @@
-use WebTek::Export qw( truncate );
-
 sub truncate :Filter {
    my ($handler, $string, $params) = @_;
 

@@ -1,5 +1,3 @@
-use WebTek::Export qw( form_ajax );
-
 sub form_ajax :Macro
    :Param(submits the form with an ajax request)
    :Param(action="action" optional, default action = response->action)

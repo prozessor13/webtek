@@ -1,5 +1,3 @@
-use WebTek::Export qw( negate_macro );
-
 sub negate_macro :Macro :Public
    :Param(value="12.3")
 {

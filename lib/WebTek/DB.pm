@@ -224,12 +224,12 @@ sub column_info {
       my $table_name = _clean($row->{'TABLE_NAME'} || $row->{'table_name'});
       next unless ($table_name eq $table);
       push @columns, {
-         'pos' => _get 'ordinal_position',
-         'name' => _clean(lc(_get 'column_name')),
-         'type' => lc(_get 'type_name'),
-         'length' => _get 'column_size',
-         'nullable' => _get 'nullable',
-         'default' => _get 'column_def',
+         'pos' => _get($row, 'ordinal_position'),
+         'name' => _clean(lc(_get($row, 'column_name'))),
+         'type' => lc(_get($row, 'type_name')),
+         'length' => _get($row, 'column_size'),
+         'nullable' => _get($row, 'nullable'),
+         'default' => _get($row, 'column_def'),
          'mysql_is_pri_key' => $row->{'mysql_is_pri_key'},
       };
    }

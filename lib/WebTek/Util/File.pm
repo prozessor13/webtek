@@ -6,15 +6,15 @@ package WebTek::Util::File;
 # some file utils
 
 use strict;
+use WebTek::Exception;
 use WebTek::Export qw( slurp write copy find );
 
 sub slurp {
    my $file = shift;
    my $is_binary_file = shift;
 
-   my $enc = ($is_binary_file ? ":raw" : ":utf8");   
-   
-   open(FILE, "<".$enc, $file) or throw "cannot slurp file '$file': $!";
+   my $enc = $is_binary_file ? ":raw" : ":utf8";
+   open(FILE, "<" . $enc, $file) or throw "cannot slurp file '$file': $!";
    my @lines = <FILE>;
    close(FILE);
    return join('', @lines);
@@ -75,3 +75,5 @@ sub find {
    
    return aux($dir, \%params);
 }
+
+1;

@@ -1,4 +1,3 @@
-use WebTek::Export qw( encode_js );
 use WebTek::Data::Struct qw( struct );
 
 sub encode_js :Filter {

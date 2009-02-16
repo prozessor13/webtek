@@ -1,5 +1,3 @@
-use WebTek::Export qw( input );
-
 sub input :Macro
    :Param(renders an form input tag)
    :Param(name="x" input-tag name)

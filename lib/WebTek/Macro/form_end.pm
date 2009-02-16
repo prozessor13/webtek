@@ -1,5 +1,3 @@
-use WebTek::Export qw( form_end );
-
 sub form_end :Macro
    :Param(render the form-end-tag and extends response.message with form error-information)
    :Param(message="msg2" define the response.message container, default="default")

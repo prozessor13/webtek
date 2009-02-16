@@ -1,5 +1,3 @@
-use WebTek::Export qw( boolean );
-
 sub boolean :Filter {
    my ($handler, $value, $params) = @_;
    

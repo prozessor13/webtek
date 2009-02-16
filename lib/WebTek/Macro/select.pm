@@ -1,5 +1,3 @@
-use WebTek::Export qw( select );
-
 sub select :Macro
    :Param(renders a select box (=dropdown))
    :Param(values="value1,value2,value3" define the values)

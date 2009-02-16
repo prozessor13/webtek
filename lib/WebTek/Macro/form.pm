@@ -1,5 +1,3 @@
-use WebTek::Export qw( form );
-
 sub form :Macro
    :Param(render a form tag)
    :Param(action="action" optional, default action = response->action)

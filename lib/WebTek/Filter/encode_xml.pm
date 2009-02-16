@@ -1,5 +1,3 @@
-use WebTek::Export qw( encode_xml );
-
 sub encode_html :Filter {
    my ($handler, $string, $params) = @_;
    

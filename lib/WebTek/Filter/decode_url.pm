@@ -1,5 +1,3 @@
-use WebTek::Export qw( decode_url );
-
 sub decode_url :Filter {
    my ($handler, $string, $params) = @_;   
    

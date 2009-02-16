@@ -1,5 +1,3 @@
-use WebTek::Export qw( activate_urls );
-
 sub activate_urls :Filter {
    my ($handler, $string, $params) = @_;
    

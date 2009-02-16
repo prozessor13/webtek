@@ -1,5 +1,3 @@
-use WebTek::Export qw( select_from_list );
-
 sub select_from_list :Macro 
    :Param(renders a select box (=dropdown) from a list)
    :Param(list="&lt;% xyz_list %>" is the list of objects to be displayed)

@@ -1,5 +1,3 @@
-use WebTek::Export qw( encode_url );
-
 sub encode_url :Filter {
    my ($handler, $string, $params) = @_;
    use bytes;

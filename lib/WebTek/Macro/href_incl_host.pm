@@ -1,5 +1,3 @@
-use WebTek::Export qw( href_incl_host );
-
 sub href_incl_host :Macro
    :Param(renders the URL of the page, incl http://myhost.com/ etc.)
    :Param(action="name" call an action of this page (optional))

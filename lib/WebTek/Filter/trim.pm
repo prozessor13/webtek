@@ -1,5 +1,3 @@
-use WebTek::Export qw( trim );
-
 sub trim :Filter {
    my ($handler, $string, $param) = @_;
    
