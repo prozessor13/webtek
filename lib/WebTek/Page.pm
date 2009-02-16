@@ -467,8 +467,9 @@ sub can_action {
    return undef;
 }
                 
-sub can_rest {  
-   return $_[1] if WebTek::Attributes->is_rest($_[0]->can($_[1]));
+sub can_rest {
+   my $method = lc(request->method);
+   return $method if WebTek::Attributes->is_rest($_[0]->can($method));
    return undef;
 }
                 
