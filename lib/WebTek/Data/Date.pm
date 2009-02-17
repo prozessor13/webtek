@@ -41,7 +41,7 @@ sub to_string {
 
    return undef unless $self->is_valid;
    $params{'format'} ||= "%d.%m.%Y %H:%M";
-   $params{'timezome'} ||= $self->timezone;
+   $params{'timezone'} ||= $self->timezone;
    return time2str($params{'format'}, $self->to_time, $params{'timezone'});
 }
 
