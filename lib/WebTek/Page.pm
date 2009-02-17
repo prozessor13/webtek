@@ -792,7 +792,9 @@ sub message :Macro
    #... find language for request
    $params{'language'} ||= session->language || request->language;
    #... render message
-   my $key = WebTek::Cache::key($params{'language'}, $params{'key'});
+   my $k = $params{'key'} || $params{$params{'language'}};
+   return "" unless $k;
+   my $key = WebTek::Cache::key($params{'language'}, $k);
    my $compiled = $Messages{ref $self}{$key};
    if (config->{'code-reload'} or not $compiled) {
       my $message = WebTek::Message->message(%params);
