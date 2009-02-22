@@ -1,3 +1,6 @@
+package WebTek::Filter;
+
+use strict;
 use Date::Language;
 use Date::Format qw( time2str );
 use WebTek::Data::Date qw( date );
@@ -20,3 +23,5 @@ sub format_date :Filter {
       ? Date::Language->new($l)->time2str($format, $date->to_time, $timezone)
       : time2str($format, $date->to_time, $timezone);
 }
+
+1;

@@ -9,7 +9,7 @@ use WebTek::Logger qw( ALL );
 use WebTek::Exception;
 use WebTek::Export qw( event );
 
-our %SharedInstance = ();
+our %SharedInstance;
 
 sub new { bless { }, shift }
 

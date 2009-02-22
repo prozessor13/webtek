@@ -1,3 +1,7 @@
+package WebTek::Filter;
+
+use strict;
+
 sub count :Filter
    :Param(take a list, and convert it to a number - the list's size)
    :Param(to enable <% customer.profiles | count %>)
@@ -5,3 +9,5 @@ sub count :Filter
    my ($handler, $input, $params) = @_;
    return scalar(@$input);
 }
+
+1;

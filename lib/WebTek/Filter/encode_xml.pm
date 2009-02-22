@@ -1,3 +1,7 @@
+package WebTek::Filter;
+
+use strict;
+
 sub encode_html :Filter {
    my ($handler, $string, $params) = @_;
    
@@ -9,3 +13,5 @@ sub encode_html :Filter {
    
    return $string;
 }
+
+1;

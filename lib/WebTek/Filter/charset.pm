@@ -1,3 +1,6 @@
+package WebTek::Filter;
+
+use strict;
 use Encode qw( encode );
 
 sub charset :Filter {
@@ -8,3 +11,5 @@ sub charset :Filter {
       ? encode($charset, $string)
       : $string;
 }
+
+1;

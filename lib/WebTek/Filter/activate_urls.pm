@@ -1,3 +1,7 @@
+package WebTek::Filter;
+
+use strict;
+
 sub activate_urls :Filter {
    my ($handler, $string, $params) = @_;
    
@@ -15,3 +19,5 @@ sub activate_urls :Filter {
  
    return $string;
 }
+
+1;

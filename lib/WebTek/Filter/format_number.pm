@@ -1,3 +1,7 @@
+package WebTek::Filter;
+
+use strict;
+
 sub format_number :Filter {
    my ($handler, $number, $params) = @_;
 
@@ -37,3 +41,5 @@ sub format_number :Filter {
    
    return $number;
 }
+
+1;

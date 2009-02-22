@@ -16,7 +16,7 @@ use WebTek::Static;
 use WebTek::Message;
 use WebTek::Exception;
 
-our %Files = ();
+our %Files;
 
 sub reset { $Files{app->name} = {} }
 
@@ -91,7 +91,6 @@ sub files {
       foreach my $f (readdir $fh) {
          next if $f =~ /^\.+$/ or $ignore and $f =~ /$ignore/;
          my $file = "$dir/$f";
-         #$file = readlink $file while -l $file; # follow symlinks
          if (-f $file) {
             my $mtime = (stat $file)[9];
             if ($mtime > $files->{$file}) {

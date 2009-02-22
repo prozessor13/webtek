@@ -1,3 +1,5 @@
+package WebTek::Page;
+
 sub errors :Macro
    :Info(prints the errors of the page)
    :Param(separator="&lt;br /&gt;" define the separator between each error-msg (optional))
@@ -14,3 +16,5 @@ sub errors :Macro
       $self->message('key' => $self->error_key_for($_), %params)
    } @keys;
 }
+
+1;

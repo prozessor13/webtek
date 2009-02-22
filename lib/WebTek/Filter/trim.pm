@@ -1,3 +1,7 @@
+package WebTek::Filter;
+
+use strict;
+
 sub trim :Filter {
    my ($handler, $string, $param) = @_;
    
@@ -6,3 +10,4 @@ sub trim :Filter {
    return $string;
 }
 
+1;

@@ -6,25 +6,23 @@ package WebTek::Filter;
 # load a filter during runtime
 
 use strict;
-use WebTek::Logger qw( log_error );
+use WebTek::Util;
+use WebTek::Loader;
+use WebTek::Attributes qw( MODIFY_CODE_ATTRIBUTES );
 
 sub import {
    my ($class, @names) = @_;
-   my $caller = caller;
    
-   $class->load($_, $caller) foreach (@names);
+    $class->load($_, caller) foreach (@names);
 }
 
 sub load {
    my ($class, $name, $caller) = @_;
    $caller ||= caller;
    
-   if (eval "use WebTek::Filter::$name; 1") {
-      my $sub = $class->can("$name\_filter") || $class->can($name);
-      make_method($caller, $name, $sub, "Filter");
-   } else {
-      log_error "WebTek::Filter::$name not found!" ;
-   }
+   WebTek::Loader->load("WebTek::Filter::$name");
+   WebTek::Util::make_method($caller, $name, $class->can($name));
+   $class->can($name);
 }
 
 1;

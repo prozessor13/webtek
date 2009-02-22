@@ -10,8 +10,8 @@ use WebTek::Util;
 use WebTek::Module;
 use WebTek::Attributes;
 
-our %Children = ();
-our %Parent = ();
+our %Children;
+our %Parent;
 
 sub import {
    my $class = shift;

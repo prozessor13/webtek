@@ -6,32 +6,33 @@ package WebTek::Macro;
 # load a macro during runtime
 
 use strict;
-use WebTek::Logger qw( log_error );
+use WebTek::Util;
+use WebTek::Loader;
+use WebTek::Exception;
 
 sub import {
    my ($class, @names) = @_;
-   my $caller = caller;
    
-   $class->load($_, $caller) foreach (@names);
+   $class->load($_) foreach (@names);
 }
 
 sub load {
-   my ($class, $name, $caller) = @_;
-   $caller ||= caller;
-   
-   my $x = eval "use WebTek::Macro::$name; 1";
-   print "use WebTek::Macro::$name; 1: $x\n";
-   if (eval "use WebTek::Macro::$name; 1") {
-      $name = "$name\_macro" if $class->can("$name\_macro");
-      $class->init($name, $class->can($name), $caller);
-   } else {
-      log_error "WebTek::Macro::$name not found!" ;
+   my ($class, $name) = @_;
+
+   if (WebTek::Loader->load("WebTek::Macro::$name;")) {
+      foreach my $c ('WebTek::Handler', 'WebTek::Page') {
+         if (my $coderef = $c->can("$name\_macro") || $c->can($name)) {
+            $class->init($c, $coderef);
+            return $coderef;
+         }
+      }
    }
+   throw "WebTek::Macro::$name not found!";
 }
 
 sub init {
-   my ($class, $name, $coderef, $caller) = @_;
-   $caller ||= caller;
+   my ($class, $handler, $coderef) = @_;
+   my $name = WebTek::Util::subname_for_coderef($handler, $coderef);
    my $attributes = WebTek::Attributes->attributes->{$coderef};
    
    #... create wrapper for macro print output
@@ -61,7 +62,7 @@ sub init {
    }
    
    #... save new macro mehtod
-   #WebTek::Util::make_method($caller, $name, $wrapper, @$attributes);
+   WebTek::Util::make_method($handler, $name, $wrapper, @$attributes);
 }
 
 1;

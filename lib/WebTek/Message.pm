@@ -10,7 +10,7 @@ use WebTek::Logger qw( ALL );
 use WebTek::Util::File qw( slurp );
 use WebTek::Exception;
 
-our %Messages = ();
+our %Messages;
 
 sub exists {
    my ($class, %params) = @_;

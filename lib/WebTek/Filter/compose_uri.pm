@@ -1,3 +1,7 @@
+package WebTek::Filter;
+
+use strict;
+
 sub compose_uri {
    my ($handler, $uri, $params) = @_;
    
@@ -17,3 +21,5 @@ sub compose_uri {
       ? "$uri?" . join("&", map("$_=$params->{$_}", keys %$params))
       : $uri;
 }
+
+1;

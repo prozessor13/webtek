@@ -21,7 +21,7 @@ sub import {
    }
  
    #... create import function which does the exports
-   *{"$caller\::import"} = sub {
+   my $import = sub {
       my ($class, @export) = @_;
       my $to = caller;
       my $from = $caller;
@@ -32,11 +32,16 @@ sub import {
          next unless $export[0] eq 'ALL' or grep { $export eq $_ } @export;
          throw 
             "cannot export $from\::$export to $to\::$export, " .
-            "because $from\::$export is not already defined!"
+            "because $from\::$export is not defined!"
          unless defined &{"$from\::$export"};
          *{"$to\::$export"} = \&{"$from\::$export"}
       }
-   } unless defined &{"$caller\::import"};
+   };
+   
+   #... may extend the original import function
+   *{"$caller\::import"} = defined &{"$caller\::import"}
+      ? sub { goto $caller->can('import'); goto $import }
+      : $import;
 }
 
 1;

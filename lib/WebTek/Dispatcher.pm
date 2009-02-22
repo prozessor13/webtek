@@ -7,24 +7,22 @@ package WebTek::Dispatcher;
 
 use strict;
 use WebTek::Cache;
-use WebTek::Event qw( event );
-use WebTek::Filter qw( ALL );
-use WebTek::Logger qw( ALL );
-use WebTek::Timing qw( timer_start timer_end );
 use WebTek::Parent;
-use WebTek::Request qw( request );
-use WebTek::Response qw( response );
 use WebTek::Exception;
-
-$WebTek::Dispatcher::CurrentPage = undef;
+use WebTek::Event qw( event );
+use WebTek::Request qw( request );
+use WebTek::Logger qw( log_debug );
+use WebTek::Response qw( response );
+use WebTek::Filter qw( decode_url );
+use WebTek::Timing qw( timer_start timer_end );
 
 sub dispatch {
    my ($class, $root) = @_; # $root isa WebTek::Page
    
    #... ask page-cache
    if (request->is_get
-       and !request->no_cache
-       and !request->param->no_cache
+       and not request->no_cache
+       and not request->param->no_cache
        and (my $response = WebTek::Cache::cache()->
          get($root->cache_key(request->unparsed_uri))
    )) {
@@ -80,7 +78,6 @@ sub process_path {
          my ($childpage, $constructor, $p, $regexp) = @$info;
          if (my @match = $path_info =~ /$regexp/) {
             # create child with matching path-part
-            $WebTek::Dispatcher::CurrentPage = $page;
             my $child = $childpage->$constructor(@match);
             if ($child and my $child_path = $child->path) {
                $child->parent($page);
@@ -97,7 +94,6 @@ sub process_path {
       last;
    }
 
-   $WebTek::Dispatcher::CurrentPage = undef;
    return ($path, $action, $format);
 }
 

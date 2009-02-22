@@ -11,7 +11,7 @@ use WebTek::Logger qw( ALL );
 use WebTek::Event qw( event );
 use WebTek::Util::File qw( slurp );
 
-our %Loaded = ();
+our %Loaded;
 
 sub load {
    my ($class, $package) = @_;

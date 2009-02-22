@@ -1,3 +1,7 @@
+package WebTek::Filter;
+
+use strict;
+
 sub insert_spaces_into_long_words :Filter :Public
    :Param("sometimes you don't want '...' but still want text to ")
    :Param("  format nicely in a not-too-wide block")
@@ -12,3 +16,5 @@ sub insert_spaces_into_long_words :Filter :Public
 
    return $string;
 }
+
+1;

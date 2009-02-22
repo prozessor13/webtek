@@ -30,6 +30,7 @@ require WebTek::Output;
 require WebTek::Message;
 require WebTek::Page;
 require WebTek::Filter;
+require WebTek::Macro;
 require WebTek::Parent;
 require WebTek::Paginator;
 require WebTek::Dispatcher;

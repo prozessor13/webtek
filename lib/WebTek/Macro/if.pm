@@ -1,3 +1,5 @@
+package WebTek::Handler;
+
 sub if_macro :Macro
    :Param(render param yes or no, as of the result of the condition)
    :Param(condition="some value")
@@ -12,3 +14,5 @@ sub if_macro :Macro
       "no true or false param defined!";
    return $params{'condition'} ? $params{'true'} : $params{'false'};
 }
+
+1;

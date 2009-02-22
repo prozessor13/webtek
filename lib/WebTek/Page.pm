@@ -10,7 +10,7 @@ use Class::ISA;
 use WebTek::Util qw( assert make_accessor make_method );
 use WebTek::Util::File qw( slurp );
 use WebTek::Util::Html qw( ALL );
-use WebTek::Filter qw( ALL );
+use WebTek::Filter;
 use WebTek::Macro;
 use WebTek::Globals;
 use WebTek::Message;
@@ -48,10 +48,10 @@ sub CHILD_ORDER { [] }
 # page features
 # ---------------------------------------------------------------------------
 
-our %Paths = ();
-our %ChildPaths = ();
-our %Templates = ();
-our %Messages = ();
+our %Paths;
+our %ChildPaths;
+our %Templates;
+our %Messages;
 
 # ---------------------------------------------------------------------------
 # initialize page features
@@ -151,9 +151,6 @@ sub new {
    
    my $self = $class->SUPER::new;
    $self->_errors({});
-   if ($WebTek::Dispatcher::CurrentPage) {
-      $self->parent($WebTek::Dispatcher::CurrentPage);      
-   }
    event->notify("$class-created", $self);
    
    return $self;

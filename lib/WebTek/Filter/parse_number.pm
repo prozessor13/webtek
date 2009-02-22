@@ -1,3 +1,7 @@
+package WebTek::Filter;
+
+use strict;
+
 sub parse_number :Filter {
    my ($handler, $number, $params) = @_;
    
@@ -17,3 +21,5 @@ sub parse_number :Filter {
    
    return 0+$number;
 }
+
+1;

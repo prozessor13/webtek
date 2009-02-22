@@ -7,32 +7,30 @@ package WebTek::Config;
 
 use strict;
 use WebTek::App qw( app );
-use WebTek::Util qw( assert );
-use WebTek::Logger qw( ALL );
+use WebTek::Logger;
 use WebTek::Exception;
-use WebTek::Data::Struct  qw( struct );
+use WebTek::Data::Struct;
 use WebTek::Util::File qw( slurp );
 use WebTek::Export qw( config );
 
-our %Config = ();
+our %Config;
 
 sub config {
    my $name = shift || 'webtek'; 
    my $config = $Config{app->name} or throw "Config not initialized!";
    my $result = $config->{$name};
-   unless (defined($result)) { throw "no config found for name '$name.config'";}
+   throw "no config found for name '$name.config'" unless defined $result;
    return $result;
 }
 
 sub load {
-   my $class = shift;
-   my $name = shift;
+   my ($class, $name) = @_;
 
    my @files;
    my $config = {};
    
    #... find all necessary files
-   foreach my $env (('', map { ".$_" } @{app->env})) {
+   foreach my $env ('', map { ".$_" } @{app->env}) {
       push @files, grep -f, map "$_/config/$name$env.config", @{app->dirs};
    }
 
@@ -49,8 +47,7 @@ sub load {
    $Config{app->name}->{$name} = WebTek::Data::Struct->new($config);
 }
 
-#... this code is stolen form Catalyst::Utils::merge_hashes
-sub _merge {
+sub _merge {   #... this code is stolen form Catalyst::Utils::merge_hashes
    my ($left, $right) = @_;
 
    return $left unless defined $right;

@@ -10,7 +10,6 @@ use WebTek::DB qw( DB );
 use WebTek::App qw( app );
 use WebTek::Util qw( assert make_accessor );
 use WebTek::Event qw( event );
-use WebTek::Filter qw( parse_number );
 use WebTek::Logger qw( ALL );
 use WebTek::Config qw( config );
 use WebTek::Exception;
@@ -22,9 +21,9 @@ use WebTek::Model::Postgres;
 use base qw( WebTek::Handler );
 use Encode qw( _utf8_on decode encode_utf8 );
 
-our %Primary_keys = ();
-our %Columns = ();
-our %Has_a = ();
+our %Primary_keys;
+our %Columns;
+our %Has_a;
 
 make_accessor('_in_db');               # boolean
 make_accessor('_checked');             # boolean

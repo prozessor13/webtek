@@ -2,6 +2,7 @@ package tests;
 
 use strict;
 use WebTek::Globals;
+use Test::Builder;
 use Test::Exception;
 use Test::More 'no_plan';
 

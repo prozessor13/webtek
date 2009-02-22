@@ -17,7 +17,7 @@ use WebTek::Timing qw( ALL );
 use WebTek::Export qw( DB );
 require WebTek::Config;
 
-our %SharedInstance = ();
+our %SharedInstance;
 
 sub _init {
    event->register(
@@ -29,11 +29,11 @@ sub _init {
    );
    event->register(
       'name' => 'request-had-errors',
-      'method' => sub{
+      'method' => sub {
          $_->rollback foreach values %{$SharedInstance{app->name}};
       },
       'priority' => 10,
-   );   
+   );
 }
 
 # ----------------------------------------------------------------------------
@@ -66,7 +66,7 @@ sub DESTROY {
          if ($db->{'dbh'}) { $db->{'dbh'}->disconnect }
       }
    }
-   delete($SharedInstance{app->name});
+   delete $SharedInstance{app->name};
 }
 
 # ----------------------------------------------------------------------------
@@ -122,15 +122,6 @@ sub vendor {
    elsif ($vendor =~ /^pg|postgres|postgresql$/) { return DB_VENDOR_POSTGRES }
    elsif ($vendor eq 'oracle') { return DB_VENDOR_ORACLE }
    else { return DB_VENDOR_UNKNOWN }
-}
-
-sub do_prepare {
-   my ($self, $sql) = @_;
-   
-   my $sth = $self->config->{'cache-prepare'}
-      ? $self->dbh->prepare_cached($sql)
-      : $self->dbh->prepare($sql);
-   return $sth or log_fatal "error in prepare $sql";
 }
 
 sub do_action {

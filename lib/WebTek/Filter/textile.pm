@@ -1,3 +1,6 @@
+package WebTek::Filter;
+
+use strict;
 use Text::Textile;
 
 sub textile :Filter {
@@ -11,3 +14,5 @@ sub textile :Filter {
    -esg;
    return Text::Textile::textile($string);
 }
+
+1;
