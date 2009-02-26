@@ -18,6 +18,9 @@ sub new {
    my $class = shift;
    my $struct = shift || {}; # perl obj (hash, array) or a json string (scalar)
   
+   #... check if $struct is already a struct
+   return $struct if ref $struct eq __PACKAGE__;
+  
    #... struct is already an object
    if (ref $struct) { return bless $struct, $class }
 
@@ -56,5 +59,7 @@ sub to_string {
 sub to_json { &to_string }
 
 sub to_db { &to_string }
+
+sub TO_JSON { &get }
 
 1;
