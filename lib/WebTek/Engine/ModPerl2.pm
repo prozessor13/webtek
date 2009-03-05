@@ -16,7 +16,7 @@ use WebTek::Exception;
 use Apache2::Cookie;
 use Apache2::Request;
 use Apache2::Upload;
-use Encode qw( _utf8_on decode );
+use Encode qw( _utf8_on decode encode );
 
 my @LogLevels = qw( debug info warn error crit );
 
@@ -112,7 +112,9 @@ sub finalize {
    
    #... print headers
    my %headers = %{response->headers};
-   r->content_type(response->content_type);
+   my $ct = response->content_type;
+   $ct .= "; charset=" . uc(response->charset) if $ct =~ /^text/;
+   r->content_type($ct);
    map { r->err_headers_out->set($_ => $headers{$_}) } keys %headers;
 
    #... print cookies
@@ -127,8 +129,8 @@ sub finalize {
    }
    
    #... print body (may convert to a different encoding)
-   (response->content_type =~ /^text/ and config->{'charset'} !~ /utf-?8/i)
-      ? r->print(encode(config->{'charset'}, response->buffer))
+   (response->content_type =~ /^text/ and response->charset !~ /utf-?8/i)
+      ? r->print(encode(response->charset, response->buffer))
       : r->print(response->buffer);
 }
 

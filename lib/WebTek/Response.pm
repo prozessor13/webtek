@@ -20,6 +20,7 @@ use base qw( WebTek::Handler );
 make_accessor('messages', 'Hander');
 make_accessor('status', 'Macro');
 make_accessor('content_type', 'Macro');
+make_accessor('charset', 'Macro');
 make_accessor('body', 'Macro');
 make_accessor('action', 'Macro');
 make_accessor('title', 'Macro');
@@ -39,7 +40,8 @@ sub init {
    $self->status(200);
    $self->headers({});
    $self->cookies({});
-   $self->content_type('text/html; charset=' . uc(config->{'charset'}));
+   $self->charset(config->{'charset'});
+   $self->content_type('text/html');
    $self->format(request->format);
    $self->messages(WebTek::Response::Message->new);
 
