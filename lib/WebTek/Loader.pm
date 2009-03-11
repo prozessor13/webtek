@@ -91,7 +91,6 @@ sub files {
       foreach my $f (readdir $fh) {
          next if $f =~ /^\.+$/ or $ignore and $f =~ /$ignore/;
          my $file = "$dir/$f";
-         #$file = readlink $file while -l $file; # follow symlinks
          if (-f $file) {
             my $mtime = (stat $file)[9];
             if ($mtime > $files->{$file}) {
@@ -102,7 +101,7 @@ sub files {
             push @files, @{_files($file, $files)};
          }
       }
-      
+      closedir $fh;
       return \@files;
    }
    

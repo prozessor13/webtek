@@ -409,10 +409,11 @@ sub find {
 
 sub _count {
    my $class = shift;
-   my $params = ref $_[0] ? $_[0] : { @_ };
+   my %params = ref $_[0] ? %{$_[0]} : @_;
 
-   $params->{'FETCH'} = 'count(*) as c';
-   return $class->find($params);
+   $params{'FETCH'} = 'count(*) as c';
+   delete $params{'order'};
+   return $class->find(%params);
 }
 
 sub count { &_count }
@@ -502,7 +503,6 @@ sub _fetch {
    my $class = ref $self;
 
    #... prepare params
-   my @k = @{$self->_lazy};
    my %params = map { $_ => $self->$_() } @{$self->_lazy};
 
    #... check if all primay keys are defined
