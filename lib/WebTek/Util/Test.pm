@@ -14,7 +14,7 @@ sub MODIFY_CODE_ATTRIBUTES {
    return ();
 }
 
-package WebTek::Test;
+package WebTek::Util::Test;
 
 use WebTek::Logger qw( ALL );
 

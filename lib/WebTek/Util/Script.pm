@@ -155,7 +155,7 @@ sub test :Info(test -> run all tests) {
       ? @$argv
       : grep(-d, map { "$_/scripts/test" } @{app->dirs});
    foreach (@dirs) {
-      foreach my $file (WebTek::Util::find('dir' => $_, 'name' => '*.t')) {
+      foreach my $file (WebTek::Util::File::find('dir'=>$_, 'name'=>'*.t')) {
          push @tests, WebTek::Util::Test->run($file);
       }
    }

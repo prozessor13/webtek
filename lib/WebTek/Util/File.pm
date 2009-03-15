@@ -7,6 +7,7 @@ package WebTek::Util::File;
 
 use strict;
 use WebTek::Exception;
+use WebTek::Util qw( assert );
 use WebTek::Export qw( slurp write copy find );
 
 sub slurp {

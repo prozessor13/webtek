@@ -45,7 +45,7 @@ sub MASTER_TEMPLATE_ERROR { '/others/master.error' }
 sub CHILD_ORDER { [] }
 
 # ---------------------------------------------------------------------------
-# page features
+# page cache for path/children/templates/messages
 # ---------------------------------------------------------------------------
 
 our %Paths;
@@ -162,10 +162,10 @@ sub new {
 
 sub do_action {
    my ($self, $action) = @_;
-
+   
    #... update action name in case of REST
-   my $is_rest = $action eq 'index' and $self->can_rest;
-   $action = lc(request->method) if $is_rest;
+   my $is_rest = $action eq 'index' && $self->can_rest;
+   $action = $is_rest if $is_rest;
    
    #... handle session for normal http requests
    unless ($is_rest) {

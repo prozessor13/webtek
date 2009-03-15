@@ -1,3 +1,5 @@
+package WebTek::Page;
+
 sub href_incl_host :Macro
    :Param(renders the URL of the page, incl http://myhost.com/ etc.)
    :Param(action="name" call an action of this page (optional))
@@ -8,3 +10,5 @@ sub href_incl_host :Macro
    $url = "http://" . request->hostname . $url;
    return $url;
 }
+
+1;

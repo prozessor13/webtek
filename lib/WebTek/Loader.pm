@@ -38,17 +38,16 @@ sub init {
    );
 
    #... replace require to load WebTek Modules correctly
-   my $prefix = app->class_prefix;
    *CORE::GLOBAL::require = sub {
       my $package = shift;
+      my $prefix = app->class_prefix;
       my ($pkg, $ret) = ($package, undef);
       if ($pkg =~ /^$prefix/) {
          $pkg =~ s/\//::/g;
          $pkg =~ s/.pm$//;
          $ret = WebTek::Module->require($pkg);
-      } else {
-         $ret = eval { CORE::require($package); 1 } or die $@;
       }
+      $ret = CORE::require($package) unless $ret;
       return $ret;
    };
    

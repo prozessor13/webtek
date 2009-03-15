@@ -15,9 +15,6 @@ use WebTek::Config qw( config );
 use WebTek::Exception;
 use WebTek::Data::Date qw( date );
 use WebTek::Data::Struct  qw( struct );
-use WebTek::Model::Mysql;
-use WebTek::Model::Oracle;
-use WebTek::Model::Postgres;
 use base qw( WebTek::Handler );
 use Encode qw( _utf8_on decode encode_utf8 );
 

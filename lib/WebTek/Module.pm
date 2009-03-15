@@ -17,6 +17,20 @@ sub load {
    my ($class, $package) = @_;
    log_debug("load perl module $package");
    
+   #... create filename from packagename
+   my $fname = $package;
+   $fname =~ s|\w+/||;
+   $fname =~ s|::|/|g;
+   $fname .= ".pm";
+   my $incname = $fname;
+   $fname =~ s/^.*?\///;
+
+   #... find all necesarry files
+   my @files = grep -f, map "$_/$fname", @{app->dirs};
+   
+   #... no files found
+   return 0 unless @files;
+
    #... remove all events
    event->remove_all_on_object($package) if $Loaded{$package};
 
@@ -30,35 +44,22 @@ sub load {
          delete $symtab->{$symbol};
       }
    }
-   
-   #... create filename from packagename
-   my $fname = $package;
-   $fname =~ s|\w+/||;
-   $fname =~ s|::|/|g;
-   $fname .= ".pm";
-   my $incname = $fname;
-   $fname =~ s/^.*?\///;
 
-   #... find all necesarry files
-   my @files = grep -f, map "$_/$fname", @{app->dirs};
-
-   #... (re)load code
-   if (@files) {
-      #... load module files
-      foreach my $file (@files) {
-         log_debug("load perl module file $file");
-         $class->do($file, $package);
-      }
-
-      #... may init module
-      $package->_init if $package->can('_init');
+   #... load module files
+   foreach my $file (@files) {
+      log_debug("load perl module file $file");
+      $class->do($file, $package);
    }
+
+   #... may init module
+   $package->_init if $package->can('_init');
 
    #... remember that the module is already loaded
    $Loaded{$package} = scalar @files;
    $INC{$incname} = $files[0];
-   
    event->notify('module-loaded', $package);
+   
+   return 1;
 }
 
 sub require {
