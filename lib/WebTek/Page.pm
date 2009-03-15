@@ -183,9 +183,9 @@ sub do_action {
    #... call action
    eval {
       return $self->not_found unless $action and $self->can_action($action);
-      return $self->access_denied unless $self->check_access('action' => $action);
-      $self->$action;
+      return $self->access_denied unless $self->check_access('action'=>$action);
       response->status(201) if $is_rest and request->is_post;
+      $self->$action;
    };
 
    #... process error
@@ -202,7 +202,7 @@ sub do_action {
             $self->has_errors(1);
             $self->_errors({%{$self->_errors}, %{$error->obj->_errors}});
             log_debug "$self: ObjInvalid Exception: " . $self->errors;
-            if (request->is_post and not request->can_rest) {
+            if (request->is_post and not $is_rest) {
                request->method('GET');
                $self->do_action($action);
             } else {
@@ -329,7 +329,6 @@ sub access_denied {
 # ---------------------------------------------------------------------------
 # methods about page-features
 # ---------------------------------------------------------------------------
-
 
 # returns alist of child_paths for this page
 # the child_paths are all paths of all children for this page
