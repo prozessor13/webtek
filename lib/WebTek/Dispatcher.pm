@@ -6,7 +6,6 @@ package WebTek::Dispatcher;
 # process the request
 
 use strict;
-use WebTek::Cache;
 use WebTek::Event qw( event );
 use WebTek::Filter qw( ALL );
 use WebTek::Logger qw( ALL );
@@ -16,6 +15,7 @@ use WebTek::Session qw( session );
 use WebTek::Request qw( request );
 use WebTek::Response qw( response );
 use WebTek::Exception;
+require WebTek::Cache;
 
 $WebTek::Dispatcher::CurrentPage = undef;
 

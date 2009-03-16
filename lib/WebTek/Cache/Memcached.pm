@@ -23,8 +23,10 @@ BEGIN {
 }
 
 sub new {
-   my $c = $Loaded->new(config('cache')->{'WebTek::Cache::Memcached'});
-   return bless \$c, shift;
+   my $class = shift;
+   my $config = shift || 'cache';
+   my $c = $Loaded->new(config($config)->{'WebTek::Cache::Memcached'});
+   return bless \$c, $class;
 }
 
 sub set {

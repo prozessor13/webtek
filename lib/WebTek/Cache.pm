@@ -11,8 +11,8 @@ use WebTek::Config qw( config );
 use WebTek::Loader;
 use WebTek::Exception;
 
-our $Cache;
-our $Settings = {};
+our %Cache;
+our %Settings;
 
 sub import { #... when using this module, remember that
    my $class = shift;
@@ -23,22 +23,24 @@ sub import { #... when using this module, remember that
 }
 
 sub cache {
-   unless ($Cache) {
-      if (my $class = config('cache')->{'class'}) {
+   my $config = shift || 'cache';
+   unless ($Cache{app->name}{$config}) {
+      if (my $class = config($config)->{'class'}) {
          WebTek::Loader->load($class);
-         $Cache = $class->new;                  
+         $Cache{app->name}{$config} = $class->new($config);                  
       } else {
-         $Cache = __PACKAGE__;
+         # ... dummy cache which do nothing
+         $Cache{app->name}{$config} = __PACKAGE__;
       }
    }
-   return $Cache;
+   return $Cache{app->name}{$config};
 }
 
 sub settings {
    my $key = shift;
 
-   if (@_) { $Settings->{$key} = shift }
-   return $Settings->{$key};
+   if (@_) { $Settings{app->name}{$key} = shift }
+   return $Settings{app->name}{$key};
 }
 
 sub key { return join ",", (app->name, @_) }
