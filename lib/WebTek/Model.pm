@@ -173,10 +173,12 @@ sub has_a {
 }
 
 # --------------------------------------------------------------------------
-# get database object for this model
+# get database/cache object for this model
 # --------------------------------------------------------------------------
 
-sub db { DB }
+sub _db { DB }
+
+sub _cache { WebTek::Cache::cache() }
 
 # --------------------------------------------------------------------------
 # create and init model
@@ -281,7 +283,7 @@ sub _init {
    log_debug("$$: init model $class");
    
    #... find model class for database vendor
-   my $vendor = $class->db->vendor;
+   my $vendor = $class->_db->vendor;
    my $modelclass;
    if ($vendor eq WebTek::DB::DB_VENDOR_MYSQL()) {
       $modelclass = 'WebTek::Model::Mysql';
@@ -306,8 +308,8 @@ sub _init {
    WebTek::Util::may_make_method($class, 'TABLE_NAME', sub { $tablename });
    #... analyze table
    my $tablename = $class->TABLE_NAME;
-   my $columns = $class->db->column_info($tablename);
-   my $primary_keys = $class->db->primary_keys($tablename);
+   my $columns = $class->_db->column_info($tablename);
+   my $primary_keys = $class->_db->primary_keys($tablename);
    assert(scalar(@$primary_keys), "no primary keys defined for '$tablename'");
    #... create model methods   
    foreach my $column (@$columns) {
@@ -399,7 +401,7 @@ sub find {
    my $where = @where ? "where " . join(" ", @where) : "";
    # create sql and fetch result
    my $sql = qq{ select $fetch from $table $where $order $limit $offset };
-   my $rows = $class->db->do_query($sql, @args);
+   my $rows = $class->_db->do_query($sql, @args);
    #... check if only the count was requested
    return $rows->[0]->{'c'} if $fetch eq 'count(*) as c';
    #... create objects
@@ -428,7 +430,7 @@ sub where {
    my $sql = qq{ select * from $table where $where };
    
    #... create objects
-   my $objs =  $class->_objs_for_rows($class->db->do_query($sql, @args));
+   my $objs =  $class->_objs_for_rows($class->_db->do_query($sql, @args));
    return $objs;
 }
 
@@ -439,7 +441,7 @@ sub count_where {
 
    my $table = $class->TABLE_NAME;
    my $sql = qq{ select count(*) as count from $table where $where };
-   return $class->db->do_query($sql, @args)->[0]->{'count'};
+   return $class->_db->do_query($sql, @args)->[0]->{'count'};
 }
 
 sub _objs_for_rows {
@@ -543,7 +545,7 @@ sub _content_into_objs {
       } elsif ($data_type == DATA_TYPE_NUMBER) {
          $content->{$name} = $value;
       } elsif ($data_type == DATA_TYPE_DATE) {
-         my $timezone = $class_or_self->db->config->{'timezone'};
+         my $timezone = $class_or_self->_db->config->{'timezone'};
          $content->{$name} = date($value, $timezone);
       } elsif ($data_type == DATA_TYPE_STRING) {
          $content->{$name} = $value;
@@ -592,7 +594,7 @@ sub _prepare_params {
       #... translate objects to db-columns
       if (my $ref = ref $value) {
          if ($ref =~ /^WebTek::Data::/) {
-            $params->{$key} = $value->to_db($class_or_self->db);
+            $params->{$key} = $value->to_db($class_or_self->_db);
          } elsif ($ref ne 'ARRAY') { # the ARRAY understands the find fkt
             $f_keys->{$key} = $value;
             $params->{"$key\_id"} = $value->id;
@@ -611,7 +613,7 @@ sub _values_for_columns {
 
    return map {
       (ref $content->{$_})
-         ? $content->{$_}->to_db($self->db)
+         ? $content->{$_}->to_db($self->_db)
          : $content->{$_}
    } @$columns;
 }
@@ -622,10 +624,10 @@ sub _get_next_id { } # implement this in the subclass
 # make persistent with db
 # --------------------------------------------------------------------------
 
-# like "$self->db->do_action" but subclasses can override to throw meaningful exceptions
+# like "$self->_db->do_action" but subclasses can override to throw meaningful exceptions
 sub _do_do_action {
    my ($self, $sql, @args) = @_;
-   $self->db->do_action($sql, @args);
+   $self->_db->do_action($sql, @args);
 }
 
 sub throw_model_invalid_if_errors {
@@ -638,7 +640,7 @@ sub throw_model_invalid_if_errors {
    }
 }
 
-# like "$self->db->do_action" but converts constraint errors into $self->{errors}
+# like "$self->_db->do_action" but converts constraint errors into $self->{errors}
 sub _do_action {
    my ($self, $sql, @args) = @_;
    
@@ -701,7 +703,7 @@ sub save {
       my @args = $self->_values_for_columns(\@columns);
       $self->_do_action($sql, @args);
       if ($self->can('id') and not defined $self->{'content'}->{'id'}) {
-         $self->id($self->db->last_insert_id($table_name, 'id'));
+         $self->id($self->_db->last_insert_id($table_name, 'id'));
       }
       $self->_updated(\@columns);
    }
@@ -734,13 +736,13 @@ sub delete_from_cache {
          if (my $content = $self->_persistent_content) {
             my @values = $self->_values_for_columns(\@columns, $content);
             my $key = WebTek::Cache::key($class, @columns, @values);
-            WebTek::Cache::cache()->delete($key);
+            $self->_cache->delete($key);
             log_debug "$$: WebTek::Model: delete_from_cache - old: $key";
          }
          #... remove new content (state after update) from cache
          my @values = $self->_values_for_columns(\@columns);
          my $key = WebTek::Cache::key($class, @columns, @values);
-         WebTek::Cache::cache()->delete($key);
+         $self->_cache->delete($key);
          log_debug "$$: WebTek::Model: delete_from_cache - new: $key";
       }
    }
@@ -758,7 +760,7 @@ sub set_to_cache {
          my @columns = split ",", $key;
          my @values = $self->_values_for_columns(\@columns);
          my $key = WebTek::Cache::key($class, @columns, @values);
-         WebTek::Cache::cache()->set($key, $obj);
+         $self->_cache->set($key, $obj);
          log_debug "$$: WebTek::Model: set_to_cache: $key, $obj";
       }
    }
@@ -778,7 +780,7 @@ sub get_from_cache {
          $class->_prepare_params(\%p);
          my @values = map $p{$_}, @columns;         
          my $cache_key = WebTek::Cache::key($class, @columns, @values);
-         my $obj = WebTek::Cache::cache()->get($cache_key);
+         my $obj = $class->_cache->get($cache_key);
          return unless $obj;
          #... populate object with search setting (they may be objects)
          $obj->$_($params->{$_}) foreach (@columns);
@@ -807,7 +809,7 @@ sub delete {
    my $where = join(" and ", map { "$_ = ?" } @{$self->primary_keys});
    my @args = map { $self->{'content'}->{$_} } @{$self->primary_keys};
    my $sql = qq{ delete from $table_name where $where };
-   $self->db->do_action($sql, @args);
+   $self->_db->do_action($sql, @args);
 
    event->notify("$class-after-delete", $self);
    $self->after_delete if $self->can("after_delete");
@@ -891,7 +893,7 @@ sub _check {
    CHECK: foreach my $column (@{$self->columns}) {
       my $name = $column->{'name'};
       my $content = $self->{'content'}->{$name};
-      my $value = ref $content ? $content->to_db($self->db) : $content;
+      my $value = ref $content ? $content->to_db($self->_db) : $content;
 
       #... dont check the id-field when model is not in db
       next CHECK if $name eq 'id' and !$self->_in_db;
@@ -1014,7 +1016,7 @@ sub to_hash {
       my $content = $self->{'content'}->{$name};
       $hash->{$name} = encode_utf8(
          ref($content) =~ /^WebTek::Data/
-            ? $content->to_db($self->db)
+            ? $content->to_db($self->_db)
             : $content
       );
       _utf8_on($hash->{$name});
