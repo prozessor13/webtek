@@ -151,6 +151,7 @@ sub _init {
                   log_debug(
                      "send not_modified because of ETag in $class\::$subname"
                   );
+                  response->no_cache(1);
                   return $self->not_modified;
                } else {
                   $coderef->($self);
@@ -168,6 +169,7 @@ sub _init {
                'name' => "$class\-after-action-$subname",
                'method' => sub {
                   return if session->user
+                     or response->status ne 200
                      or response->no_cache
                      or request->no_cache
                      or request->param->no_cache;
