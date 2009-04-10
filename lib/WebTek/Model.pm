@@ -25,6 +25,7 @@ use Encode qw( _utf8_on decode encode_utf8 );
 our %Primary_keys = ();
 our %Columns = ();
 our %Has_a = ();
+our %Real = ();
 
 make_accessor('_in_db');               # boolean
 make_accessor('_checked');             # boolean
@@ -123,6 +124,13 @@ sub foreign_keys {
 # --------------------------------------------------------------------------
 # set information about the model
 # --------------------------------------------------------------------------
+
+sub _real {
+   my $class = shift;
+   
+   $Real{app->name}->{$class} = shift if @_;
+   return $Real{app->name}->{$class};
+}
 
 sub _primary_keys {
    my $class = shift;
@@ -259,6 +267,7 @@ sub _init {
 
    #... check if model is a real model
    #... (i.e. model is direct subclass of WebTek::Model)
+   $class->_real($class);
    sub is_real_model { grep /^WebTek::Model/, @{"$_[0]\::ISA"} }
 
    #... handle unreal models (= single table inheritance)
@@ -272,7 +281,9 @@ sub _init {
          }
       }
       $real = ${"$real\::ISA"}[0] while not is_real_model($real);
+      $class->_real($real);
       log_debug "$$: copy modelinfos from $real into not real model $class";
+      #... set model info
       $class->_columns($real->columns);
       $class->_primary_keys($real->primary_keys);
       $class->has_a(@$_[1,2,3]) foreach @{$real->foreign_keys};
@@ -728,20 +739,21 @@ sub save {
 sub delete_from_cache {
    my $self = shift;
    my $class = ref $self;
+   my $real = $class->_real;
 
-   if (my $keys = WebTek::Cache::settings($class)) {
+   if (my $keys = WebTek::Cache::settings($real)) {
       foreach my $key (@$keys) {
          my @columns = split ",", $key;
          #... remove old content (state before update) from cache
          if (my $content = $self->_persistent_content) {
             my @values = $self->_values_for_columns(\@columns, $content);
-            my $key = WebTek::Cache::key($class, @columns, @values);
+            my $key = WebTek::Cache::key($real, @columns, @values);
             $self->_cache->delete($key);
             log_debug "$$: WebTek::Model: delete_from_cache - old: $key";
          }
          #... remove new content (state after update) from cache
          my @values = $self->_values_for_columns(\@columns);
-         my $key = WebTek::Cache::key($class, @columns, @values);
+         my $key = WebTek::Cache::key($real, @columns, @values);
          $self->_cache->delete($key);
          log_debug "$$: WebTek::Model: delete_from_cache - new: $key";
       }
@@ -751,15 +763,16 @@ sub delete_from_cache {
 sub set_to_cache {
    my $self = shift;
    my $class = ref $self;
+   my $real = $class->_real;
 
    #... set obj for each cache key
-   if (my $keys = WebTek::Cache::settings($class)) {
+   if (my $keys = WebTek::Cache::settings($real)) {
       #... create a copy of $self with all foreign-keys setted to lazy refs
       my $obj = $class->new_from_db($self->{'content'});
       foreach my $key (@$keys) {
          my @columns = split ",", $key;
          my @values = $self->_values_for_columns(\@columns);
-         my $key = WebTek::Cache::key($class, @columns, @values);
+         my $key = WebTek::Cache::key($real, @columns, @values);
          $self->_cache->set($key, $obj);
          log_debug "$$: WebTek::Model: set_to_cache: $key, $obj";
       }
@@ -768,8 +781,9 @@ sub set_to_cache {
 
 sub get_from_cache {
    my ($class, $params) = @_;
+   my $real = $class->_real;
    
-   my $keys = WebTek::Cache::settings($class);
+   my $keys = WebTek::Cache::settings($real);
    return unless $keys;
    my $key1 = join ",", sort(keys %$params);
    foreach my $key (@$keys) {
@@ -779,7 +793,7 @@ sub get_from_cache {
          my %p = %$params;
          $class->_prepare_params(\%p);
          my @values = map $p{$_}, @columns;         
-         my $cache_key = WebTek::Cache::key($class, @columns, @values);
+         my $cache_key = WebTek::Cache::key($real, @columns, @values);
          my $obj = $class->_cache->get($cache_key);
          return unless $obj;
          #... populate object with search setting (they may be objects)

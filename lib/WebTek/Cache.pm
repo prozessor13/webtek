@@ -53,4 +53,8 @@ sub get { }
 
 sub delete { }
 
+sub incr { }
+
+sub decr { }
+
 1;

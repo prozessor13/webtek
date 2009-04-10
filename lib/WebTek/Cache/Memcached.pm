@@ -30,25 +30,35 @@ sub new {
 }
 
 sub set {
-   my ($self, $key) = (shift, shift);
-   return $$self->set(md5_hex(encode_utf8($key)), @_);
+   my ($self, $key, @set) = @_;
+   return $$self->set(md5_hex(encode_utf8($key)), @set);
 }
 
 sub add {
-   my ($self, $key) = (shift, shift);
-   return $$self->add(md5_hex(encode_utf8($key)), @_);
+   my ($self, $key, @add) = @_;
+   return $$self->add(md5_hex(encode_utf8($key)), @add);
 }
 
 sub get {
-   my ($self, $key) = (shift, shift);
+   my ($self, $key) = @_;
    my $string = $$self->get(md5_hex(encode_utf8($key)));
    _utf8_on($string);
    return $string;
 }
 
 sub delete {
-   my ($self, $key) = (shift, shift);
+   my ($self, $key) = @_;
    return $$self->delete(md5_hex(encode_utf8($key)));
+}
+
+sub incr {
+   my ($self, $key, @incr) = @_;
+   return $$self->incr(md5_hex(encode_utf8($key)), @incr);
+}
+
+sub decr {
+   my ($self, $key, @decr) = @_;
+   return $$self->decr(md5_hex(encode_utf8($key)), @decr);
 }
 
 1;
