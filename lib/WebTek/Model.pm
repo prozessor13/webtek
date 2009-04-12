@@ -342,11 +342,11 @@ sub _init {
 
 sub find_one {
    my $class = shift;
-   my $params = ref $_[0] ? $_[0] : { @_ };
+   my %params = ref $_[0] ? %{$_[0]} : @_;
 
-   my $obj = $class->get_from_cache($params);
+   my $obj = $class->get_from_cache(\%params);
    unless ($obj) {
-      $obj = $class->find($params)->[0];
+      $obj = $class->find(%params)->[0];
       $obj->set_to_cache if $obj;
    }
    return $obj;
@@ -354,36 +354,36 @@ sub find_one {
 
 sub find_one_or_die {
    my $class = shift;
-   my $params = ref $_[0] ? $_[0] : { @_ };
+   my %params = ref $_[0] ? %{$_[0]} : @_;
 
-   my $result = $class->find_one($params);
+   my $result = $class->find_one(%params);
    assert $result, "Row not found in database: table '".$class->TABLE_NAME().
-      "': ".join(", ", map { "'$_' => '".$params->{$_}."'" } keys(%$params));
+      "': ".join(", ", map { "'$_' => '".$params{$_}."'" } keys(%params));
    return $result;
 }
 
 sub find {
    my $class = shift;
-   my $params = ref $_[0] ? $_[0] : { @_ };
+   my %params = ref $_[0] ? %{$_[0]} : @_;
 
    #... fetch from db
-   my $f_keys = $class->_prepare_params($params);
+   my $f_keys = $class->_prepare_params(\%params);
    my $table = $class->TABLE_NAME;
-   my $order = $params->{'order'} ? "order by $params->{'order'}" : '';
-   my $combine = $params->{'combine'} || 'and';
-   my $limit = $params->{'limit'} ? "limit $params->{'limit'}" : '';
-   my $offset = $params->{'offset'} ? "offset $params->{'offset'}" : '';
-   my $fetch = $params->{'FETCH'} || "*";
-   delete $params->{'FETCH'};
-   delete $params->{'limit'};
-   delete $params->{'offset'};
-   delete $params->{'order'};
-   delete $params->{'combine'};
+   my $order = $params{'order'} ? "order by $params{'order'}" : '';
+   my $combine = $params{'combine'} || 'and';
+   my $limit = $params{'limit'} ? "limit $params{'limit'}" : '';
+   my $offset = $params{'offset'} ? "offset $params{'offset'}" : '';
+   my $fetch = $params{'FETCH'} || "*";
+   delete $params{'FETCH'};
+   delete $params{'limit'};
+   delete $params{'offset'};
+   delete $params{'order'};
+   delete $params{'combine'};
    # single table inheritance
-   $params->{'class'} ||= $class->_class if $class->can('_class');
+   $params{'class'} ||= $class->_class if $class->can('_class');
    # parse conditions
    my @conditions = ();
-   foreach my $key (keys %$params) {
+   foreach my $key (keys %params) {
       if ($key =~ /^((and|or)\s+)?(\S+)(\s+(\S+))?$/) {
          my $com = $2 || $combine;
          my $col = $3;
@@ -400,12 +400,12 @@ sub find {
    my @where = ();
    foreach (@conditions) {
       my ($key, $com, $col, $match) = @$_;
-      if (ref $params->{$key} eq 'ARRAY') {
-         my $in = join " or ", map { "`$col` $match ?" } @{$params->{$key}};
-         push @args, @{$params->{$key}};
+      if (ref $params{$key} eq 'ARRAY') {
+         my $in = join " or ", map { "`$col` $match ?" } @{$params{$key}};
+         push @args, @{$params{$key}};
          push @where, (@where ? "$com ( $in )" : "( $in )");
       } else {
-         push @args, $params->{$key};
+         push @args, $params{$key};
          push @where, (@where ? "$com `$col` $match ?" : "`$col` $match ?");
       }
    }
