@@ -16,14 +16,14 @@ sub encode_json {
    my $input = shift;
    return eval {
       $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref->encode($input);
-   } or throw $@;
+   } || throw $@;
 }
 
 sub decode_json_or_die {
    my $input = shift;
    return eval {
       $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref->decode($input);
-   } or throw $@;
+   } || throw $@;
 }
 
 1;
