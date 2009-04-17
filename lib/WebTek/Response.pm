@@ -29,6 +29,7 @@ make_accessor('buffer');
 make_accessor('headers');
 make_accessor('cookies');
 make_accessor('no_cache');
+make_accessor('pretty');
 
 our $Response;
 

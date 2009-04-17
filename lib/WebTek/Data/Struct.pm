@@ -51,7 +51,7 @@ sub get {
 sub to_string {
    my ($self, $params) = @_;
 
-   my $string = encode_json($self->get($params->{'path'}));
+   my $string = encode_json($self->get($params->{'path'}), $params->{'pretty'});
    _utf8_on($string);
    return $string;
 }

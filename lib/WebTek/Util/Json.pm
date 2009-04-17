@@ -14,8 +14,10 @@ BEGIN {
 
 sub encode_json {
    my $input = shift;
-   return eval {
-      $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref->encode($input);
+   my $pretty = shift;
+   return eval { $pretty
+      ? $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref->pretty(1)->encode($input)
+      : $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref->encode($input);
    } || throw $@;
 }
 
