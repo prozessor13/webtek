@@ -169,6 +169,16 @@ sub config_macro :Macro
    return WebTek::Config::config($params{'name'})->get($params{'key'});
 }
 
+sub struct_macro :Macro 
+   :Param(access a struct object)
+   :Param(obj="{a=>123, b=>456}")
+   :Param(key="a")
+{
+   my ($self, %params) = @_;
+
+   return WebTek::Data::Struct::struct($params{'obj'})->get($params{'get'});
+}
+
 sub foreach_macro :Macro 
    :Param(list="<% some_list %>")
    :Param(iterator="iteratorname")
@@ -197,7 +207,7 @@ sub foreach_macro :Macro
       "handler can only render strings, not templates"
    );
 
-   my $output;
+   my @output;
    my $p = {};
    foreach my $item (@{$params{'list'}}) {
       if (not ref $item) {
@@ -212,13 +222,13 @@ sub foreach_macro :Macro
          $self->handler($params{'iterator'}, $item);         
       }
       if ($params{'do'}) {
-         $output .= $self->render_string($params{'do'}, $p);
+         push @output, $self->render_string($params{'do'}, $p);
       } else {
-         $output .= $self->render_template($params{'template'}, $p);
+         push @output, $self->render_template($params{'template'}, $p);
       }
    }
    $self->handler($params{'iterator'}, undef);
-   return $output;
+   return join $params{'join'}, @output;
 }
 
 1;
