@@ -13,19 +13,22 @@ BEGIN {
 }
 
 sub encode_json {
-   my $input = shift;
-   my $pretty = shift;
-   return eval { $pretty
-      ? $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref->pretty(1)->encode($input)
-      : $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref->encode($input);
-   } || throw $@;
+   my ($input, $pretty) = @_;
+   my $json = $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref;
+   $json->pretty(1) if $pretty;
+   my $string = eval { $json->encode($input) };
+   return $string unless $@;
+   $@ =~ s/ at [\w\/]*WebTek\/Util\/Json\.pm.*//g;
+   throw $@;
 }
 
 sub decode_json_or_die {
    my $input = shift;
-   return eval {
-      $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref->decode($input);
-   } || throw $@;
+   my $json = $Loaded->new->utf8->allow_blessed->convert_blessed->allow_nonref;
+   my $struct = eval { $json->decode($input) };
+   return $struct unless $@;
+   $@ =~ s/ at [\w\/]*WebTek\/Util\/Json\.pm.*//sg;
+   throw $@;
 }
 
 1;
