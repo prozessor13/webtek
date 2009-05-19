@@ -47,8 +47,14 @@ sub run {
       #... call testfkt
       my $subname = WebTek::Util::subname_for_coderef('tests', $test);
       log_info "   - run test '$subname':";
-      eval { $test->(); 1; }
-         or log_error "     error running tests, details: $@";
+      eval {
+         $test->();
+         DB->commit;
+         1;
+      } or do {
+         DB->rollback;
+         log_error "     error running tests, details: $@";
+      };
       #... check and generate result
       my @tests = $Test->summary;
       if (grep !$_, @tests) {
