@@ -46,6 +46,14 @@ sub get {
    return $string;
 }
 
+sub get_multi {
+   my ($self, @keys) = @_;
+   my %keys = map { md5_hex(encode_utf8($_)) => $_ } @keys;
+   my $result = $$self->get_multi(keys %keys);
+   _utf8_on($result->{$_}) foreach keys %$result;
+   return { map { $keys{$_} => $result->{$_} } keys %$result };
+}
+
 sub delete {
    my ($self, $key) = @_;
    return $$self->delete(md5_hex(encode_utf8($key)));

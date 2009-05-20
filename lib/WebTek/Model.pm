@@ -344,7 +344,7 @@ sub find_one {
    my $class = shift;
    my %params = ref $_[0] ? %{$_[0]} : @_;
 
-   my $obj = $class->get_from_cache(\%params);
+   my $obj = $class->get_from_cache(%params);
    unless ($obj) {
       $obj = $class->find(%params)->[0];
       $obj->set_to_cache if $obj;
@@ -779,29 +779,34 @@ sub set_to_cache {
    }
 }
 
-sub get_from_cache {
-   my ($class, $params) = @_;
+sub cache_key {
+   my ($class, %params) = @_;
    my $real = $class->_real;
    
    my $keys = WebTek::Cache::settings($real);
    return unless $keys;
-   my $key1 = join ",", sort(keys %$params);
+   my $key1 = join ",", sort(keys %params);
    foreach my $key (@$keys) {
       my @columns = sort(split ",", $key);
       my $key2 = join ",", @columns;
       if ($key1 eq $key2) {
-         my %p = %$params;
-         $class->_prepare_params(\%p);
-         my @values = map $p{$_}, @columns;         
-         my $cache_key = WebTek::Cache::key($real, @columns, @values);
-         my $obj = $class->_cache->get($cache_key);
-         return unless $obj;
-         #... populate object with search setting (they may be objects)
-         $obj->$_($params->{$_}) foreach (@columns);
-         log_debug "$$: WebTek::Model: get_from_cache: $cache_key: $obj";
-         return $obj;
+         $class->_prepare_params(\%params);
+         my @values = map $params{$_}, @columns;         
+         return WebTek::Cache::key($real, @columns, @values), @columns;
       }
    }
+}
+
+sub get_from_cache {
+   my ($class, %params) = @_;
+   
+   my ($cache_key, @columns) = $class->cache_key(%params);
+   my $obj = $class->_cache->get($cache_key);
+   return unless $obj;
+   #... populate object with search setting (they may be objects)
+   $obj->$_($params{$_}) foreach (@columns);
+   log_debug "$$: WebTek::Model: get_from_cache: $cache_key: $obj";
+   return $obj;
 }
 
 # --------------------------------------------------------------------------
