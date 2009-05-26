@@ -801,6 +801,7 @@ sub get_from_cache {
    my ($class, %params) = @_;
    
    my ($cache_key, @columns) = $class->cache_key(%params);
+   return unless $cache_key;
    my $obj = $class->_cache->get($cache_key);
    return unless $obj;
    #... populate object with search setting (they may be objects)
@@ -1036,7 +1037,7 @@ sub to_hash {
       $hash->{$name} = encode_utf8(
          ref($content) =~ /^WebTek::Data/
             ? $content->to_db($self->_db)
-            : $content
+            : $content || ''
       );
       _utf8_on($hash->{$name});
    }

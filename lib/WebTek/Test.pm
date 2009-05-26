@@ -49,10 +49,10 @@ sub run {
       log_info "   - run test '$subname':";
       eval {
          $test->();
-         DB->commit;
+         WebTek::DB::DB()->commit;
          1;
       } or do {
-         DB->rollback;
+         WebTek::DB::DB()->rollback;
          log_error "     error running tests, details: $@";
       };
       #... check and generate result
