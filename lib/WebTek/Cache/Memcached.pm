@@ -40,10 +40,10 @@ sub set_multi {
    my ($self, @sets) = @_;
    my @sets2 = map [ md5_hex(encode_utf8($_->[0])), $_->[1] ], @sets;
    my @r = $$self->set_multi(@sets2);
-   print WebTek::Data::Struct::struct(\@sets2);
    if (my @e = grep $_, map { @r[$_] ? undef : $sets[$_][0] } 0 .. $#r) {
       log_warning("WebTek::Cache::Memcached cannot save keys: @e");
    }
+   return \@r;
 }
 
 sub add {
