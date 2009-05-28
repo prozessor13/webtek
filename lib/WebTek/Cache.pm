@@ -47,9 +47,19 @@ sub key { return join ",", (app->name, @_) }
 
 sub set { }
 
+sub set_multi {
+   my $class = shift;
+   return [ map { $class->get(@$_) } @_ ];
+}
+
 sub add { }
 
 sub get { }
+
+sub get_multi {
+   my $class = shift;
+   return { map { $_ => $class->get($_) } @_ };
+}
 
 sub delete { }
 

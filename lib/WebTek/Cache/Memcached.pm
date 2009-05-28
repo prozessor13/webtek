@@ -9,6 +9,7 @@ use strict;
 use WebTek::Config qw( config );
 use Encode qw( _utf8_on encode_utf8 );
 use Digest::MD5 qw( md5_hex );
+use WebTek::Logger qw( log_warning );
 
 our $Loaded;
 
@@ -31,7 +32,18 @@ sub new {
 
 sub set {
    my ($self, $key, @set) = @_;
-   return $$self->set(md5_hex(encode_utf8($key)), @set);
+   return $$self->set(md5_hex(encode_utf8($key)), @set)
+      or log_warning("WebTek::Cache::Memcached cannot save key: $key");
+}
+
+sub set_multi {
+   my ($self, @sets) = @_;
+   my @sets2 = map [ md5_hex(encode_utf8($_->[0])), $_->[1] ], @sets;
+   my @r = $$self->set_multi(@sets2);
+   print WebTek::Data::Struct::struct(\@sets2);
+   if (my @e = grep $_, map { @r[$_] ? undef : $sets[$_][0] } 0 .. $#r) {
+      log_warning("WebTek::Cache::Memcached cannot save keys: @e");
+   }
 }
 
 sub add {
