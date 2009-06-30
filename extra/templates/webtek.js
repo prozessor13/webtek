@@ -30,7 +30,8 @@ function ajaxHelper(param) {
    // prepare params
    var url = param.url; delete param.url;
    var callback = param.callback; delete param.callback;
-   if (callback && typeof callback == "string") eval("callback = " + callback);
+   if (callback && typeof callback == "string")
+      eval("callback = " + decodeHTML(callback));
    var update = param.update; delete param.update;
    var replace = param.replace; delete param.replace;
    if (param.method == null) param.method = "get";

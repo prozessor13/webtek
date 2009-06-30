@@ -34,7 +34,7 @@ sub get {
    my ($self, $path) = @_;
    
    my $obj = $self;
-   if ($path) {
+   if (defined $path) {
       foreach my $element (split /\.|___/, $path) {
          if (reftype($obj) eq 'ARRAY') { $obj = $obj->[$element] }
          elsif (reftype($obj) eq 'HASH') { $obj = $obj->{$element} }

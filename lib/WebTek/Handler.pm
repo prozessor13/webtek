@@ -10,6 +10,7 @@ use WebTek::Util qw( assert make_accessor );
 use WebTek::Filter qw( ALL );
 use WebTek::Compiler;
 use WebTek::Exception;
+use Scalar::Util qw( reftype );
 use WebTek::Attributes qw( MODIFY_CODE_ATTRIBUTES );
 
 make_accessor 'handlers';
@@ -172,7 +173,7 @@ sub config_macro :Macro
 sub struct_macro :Macro 
    :Param(access a struct object)
    :Param(obj="{a=>123, b=>456}")
-   :Param(key="a")
+   :Param(get="a")
 {
    my ($self, %params) = @_;
 
@@ -188,7 +189,7 @@ sub foreach_macro :Macro
    my ($self, %params) = @_;
    
    assert($params{'list'}, "no list defined");
-   assert(ref $params{'list'} eq 'ARRAY', "list not type of ARRAY");
+   assert(reftype $params{'list'} eq 'ARRAY', "list not type of ARRAY");
    assert(
       !$self->can_handler($params{'iterator'}),
       "there exists already a handler for this iterator-name '" .
