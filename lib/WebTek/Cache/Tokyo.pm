@@ -24,8 +24,9 @@ sub new {
 
 sub set {
    my ($self, $key, $value) = @_;
+   my $ref = ref $value ? $value : \$value;
    log_error $$self->errmsg($$self->ecode)
-      unless my $return = $$self->put($key, Storable::nfreeze($value));
+      unless my $return = $$self->put($key, Storable::nfreeze($ref));
    return $return;
 }
 
@@ -38,10 +39,12 @@ sub add {
 
 sub get {
    my ($self, $key) = @_;
-   log_error $$self->errmsg($$self->ecode)
-      unless defined(my $string = Storable::thaw($$self->get($key)));
-   _utf8_on($string);
-   return $string;
+   my $value = Storable::thaw($$self->get($key));
+   if (ref $value eq 'SCALAR') {
+      $value = $$value; 
+      _utf8_on($value);      
+   }
+   return $value;
 }
 
 sub get_multi {
