@@ -49,7 +49,7 @@ sub set { }
 
 sub set_multi {
    my $class = shift;
-   return [ map { $class->get(@$_) } @_ ];
+   return [ map { $class->set(@$_) } @_ ];
 }
 
 sub add { }
@@ -66,5 +66,7 @@ sub delete { }
 sub incr { }
 
 sub decr { }
+
+sub find { }
 
 1;

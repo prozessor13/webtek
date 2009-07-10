@@ -6,6 +6,7 @@ package WebTek::Cache::Memcached;
 # use memcached as cache for webtek: http://www.danga.com/memcached
 
 use strict;
+use WebTek::Exception;
 use WebTek::Config qw( config );
 use Encode qw( _utf8_on encode_utf8 );
 use Digest::MD5 qw( md5_hex );
@@ -80,5 +81,7 @@ sub decr {
    my ($self, $key, @decr) = @_;
    return $$self->decr(md5_hex(encode_utf8($key)), @decr);
 }
+
+sub find { throw "method not supportet" }
 
 1;
