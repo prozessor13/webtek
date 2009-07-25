@@ -7,6 +7,7 @@ use strict;
 use WebTek::Util qw( assert );
 use WebTek::Exception;
 use WebTek::Export qw( struct );
+use WebTek::Filter qw( encode_q );
 use WebTek::Util::Json qw( encode_json decode_json_or_die );
 use Scalar::Util qw( reftype blessed );
 use Encode qw( _utf8_on encode_utf8 );
@@ -76,12 +77,12 @@ sub dumper {
       return '[' . join(',', map { dumper($_) } @$ref) . ']';
    } elsif (reftype $ref eq 'HASH') {
       return '{' . join(',', map {
-         "$_=>" . dumper($ref->{$_})
+         "'" . encode_q(undef, $_) . "'=>" . dumper($ref->{$_})
       } keys %$ref) . '}';
-   } elsif (0+$ref eq $ref) {
+   } elsif ($ref =~ /\.?\d*\.?\d+/) {
       return $ref;
    } else {
-      return "'" . $ref . "'";
+      return "'" . encode_q(undef, $ref) . "'";
    }
 }
 
