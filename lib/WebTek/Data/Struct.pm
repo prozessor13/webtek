@@ -78,8 +78,8 @@ sub dumper {
       return '{' . join(',', map {
          "'" . quote($_) . "'=>" . dumper($ref->{$_})
       } keys %$ref) . '}';
-   } elsif ($ref =~ /\.?\d*\.?\d+/) {
-      return $ref;
+   } elsif ($ref =~ /^\-?\.?\d*\.?\d+$/) { # check simple number
+      return 0+$ref;
    } else {
       return "'" . quote($ref) . "'";
    }
