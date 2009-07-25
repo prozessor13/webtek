@@ -46,6 +46,8 @@ sub DATA_TYPE_BOOLEAN { 3 }
 sub DATA_TYPE_DATE { 4 }
 sub DATA_TYPE_BLOB { 5 }
 sub DATA_TYPE_STRUCT { 6 }
+sub DATA_TYPE_JSON { 6 }
+sub DATA_TYPE_PERL { 7 }
 
 sub _INIT { 1 }
 
@@ -551,8 +553,10 @@ sub _content_into_objs {
       my $value = $content->{$name};
       if ($data_type == DATA_TYPE_BOOLEAN) {
          $content->{$name} = $value ? 1 : 0;         
-      } elsif ($data_type == DATA_TYPE_STRUCT) {
+      } elsif ($data_type == DATA_TYPE_JSON) {
          $content->{$name} = struct($value);
+      } elsif ($data_type == DATA_TYPE_PERL) {
+         $content->{$name} = struct($value, 'perl');
       } elsif ($data_type == DATA_TYPE_NUMBER) {
          $content->{$name} = $value;
       } elsif ($data_type == DATA_TYPE_DATE) {

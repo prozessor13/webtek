@@ -9,24 +9,28 @@ use WebTek::Exception;
 use WebTek::Export qw( struct );
 use WebTek::Util::Json qw( encode_json decode_json_or_die );
 use Scalar::Util qw( reftype blessed );
-use overload '""' => \&to_string;
 use Encode qw( _utf8_on encode_utf8 );
 
-sub struct { __PACKAGE__->new($_[0]) }
+sub struct { __PACKAGE__->new(@_) }
 
 sub new {
    my $class = shift;
-   my $struct = shift || {}; # perl obj (hash, array) or a json string (scalar)
+   my $struct = shift || {};     # perl obj ref or a json string (scalar)
+   my $type = shift || 'json';   # json, perl
+   $class = $class . "::" . uc($type);
   
    #... check if $struct is already a struct
-   return $struct if ref $struct eq __PACKAGE__;
+   return $struct if ref $struct eq $class;
   
-   #... struct is already an object
-   if (ref $struct) { return bless $struct, $class }
+   #... struct a perl ref
+   return bless $struct, $class if ref $struct;
 
-   #... create the object from a JSON string
-   my $ref = eval { decode_json_or_die(encode_utf8($struct)) };
-   assert $ref, "$struct is not a valid JSON string: ".(ref $@ ? $@->msg : $@);
+   #... create the object from a string
+   $class = "$class\n::PERL" if $struct =~ /^#perl\n/;
+   my $ref = $class eq 'WebTek::Data::Struct::PERL'
+      ? eval encode_utf8($struct)
+      : eval { decode_json_or_die(encode_utf8($struct)) };
+   assert $ref, "$struct is not a valid $type string: ".(ref $@ ? $@->msg : $@);      
    return ref $ref ? bless $ref, $class : bless \$ref, $class;
 }
 
@@ -48,7 +52,7 @@ sub get {
    throw "cannot deserialize blessed reference '$obj'";
 }
 
-sub to_string {
+sub to_json {
    my ($self, $params) = @_;
 
    my $string = encode_json($self->get($params->{'path'}), $params->{'pretty'});
@@ -56,10 +60,53 @@ sub to_string {
    return $string;
 }
 
-sub to_json { &to_string }
+sub to_perl {
+   my $string = dumper(shift->get);
+   _utf8_on($string);
+   return "#perl\n$string";
+}
 
-sub to_db { &to_string }
+sub dumper {
+   my $ref = shift;  
+   $ref = $ref->DUMPER if blessed $ref && $ref->can('DUMPER');
 
-sub TO_JSON { &get }
+   if (!defined $ref || reftype $ref eq 'CODE') {
+      return 'undef';
+   } elsif (reftype $ref eq 'ARRAY') {
+      return '[' . join(',', map { dumper($_) } @$ref) . ']';
+   } elsif (reftype $ref eq 'HASH') {
+      return '{' . join(',', map {
+         "$_=>" . dumper($ref->{$_})
+      } keys %$ref) . '}';
+   } elsif (0+$ref eq $ref) {
+      return $ref;
+   } else {
+      return "'" . $ref . "'";
+   }
+}
+
+sub to_string { &to_json }
+
+package WebTek::Data::Struct::JSON;
+
+use base qw( WebTek::Data::Struct );
+use overload '""' => \&to_string;
+
+sub TO_JSON { shift->get(@_) }
+
+sub to_db { shift->to_json(@_) }
+
+sub to_string { shift->to_json(@_) }
+
+package WebTek::Data::Struct::PERL;
+
+use base qw( WebTek::Data::Struct );
+use overload '""' => \&to_string;
+
+sub DUMPER { shift->get(@_) }
+
+sub to_db { shift->to_perl(@_) }
+
+sub to_string { shift->to_json(@_) }
 
 1;
