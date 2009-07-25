@@ -63,7 +63,7 @@ sub to_json {
 sub to_perl {
    my $string = dumper(shift->get);
    _utf8_on($string);
-   return "#perl\n$string";
+   return "#perl\nuse utf8;\n$string";
 }
 
 sub dumper {
