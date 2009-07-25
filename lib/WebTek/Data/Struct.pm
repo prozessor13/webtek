@@ -26,7 +26,7 @@ sub new {
    return bless $struct, $class if ref $struct;
 
    #... create the object from a string
-   $class = "$class\n::PERL" if $struct =~ /^#perl\n/;
+   $class =~ s/JSON/PERL/ if $struct =~ /^\#perl\n/;
    my $ref = $class eq 'WebTek::Data::Struct::PERL'
       ? eval encode_utf8($struct)
       : eval { decode_json_or_die(encode_utf8($struct)) };
