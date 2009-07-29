@@ -69,11 +69,9 @@ sub import {
    my @public = $export{'public'} ? @{$export{'public'}} : ();
    assert($handler, "handler not defined for $caller");
    #... export handler
-   unless (defined &{"$caller\::$handler"}) {
-      my @attrs = ('Handler');
-      if (grep { $handler eq $_ } @public) { push @attrs, 'Public' }
-      WebTek::Util::make_method($caller, $handler, undef, @attrs);
-   }
+   my @attrs = ('Handler');
+   if (grep { $handler eq $_ } @public) { push @attrs, 'Public' }
+   WebTek::Util::make_method($caller, $handler, undef, @attrs);
    #... export macros
    foreach my $macro (@macros) {
       my ($column, $as) = ($macro, $macro);
