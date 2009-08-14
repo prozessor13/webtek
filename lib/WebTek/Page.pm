@@ -588,7 +588,7 @@ sub form :Macro
    $self->{'__form_errors'} = $self->_suppress_errors ? undef : [];
    
    if ($params{'action'}) {
-      $params{'action'} = $params{'action'} =~ /^\//
+      $params{'action'} = $params{'action'} =~ /(http:\/\/|\/)/
          ? $params{'action'}                             # absolute href
          : $self->href('action' => $params{'action'});   # relative href
    } else {

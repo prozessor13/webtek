@@ -164,6 +164,7 @@ sub has_a {
    }
 
    #... find the model and constructor for the foreign-key
+   $model ||= $Has_a{app->name}->{$class}->{$column}->[1];
    unless ($model) {
       my $modelprefix = $class;
       $modelprefix =~ s/(\w+)$//;

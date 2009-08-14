@@ -113,6 +113,25 @@ sub and_macro :Macro
    return $params{'value1'} && $params{'value2'};
 }
 
+sub or_macro :Macro 
+   :Param(combine two values with logical and)
+   :Param(value1="abc")
+   :Param(value2="abc")
+{
+   my ($self, %params) = @_;
+   
+   return $params{'value1'} || $params{'value2'};
+}
+
+sub not_macro :Macro 
+   :Param(combine two values with logical and)
+   :Param(value="123")
+{
+   my ($self, %params) = @_;
+   
+   return not $params{'value'};
+}
+
 sub add_macro :Macro :Public
    :Param(numerical addition)
    :Param(value1="12.3")
