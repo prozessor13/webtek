@@ -8,6 +8,6 @@
       </style>
    </head>
    <body>
-      <% response.body %>
+      <% response.message %>
    </body>
 </html>

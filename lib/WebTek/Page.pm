@@ -305,13 +305,14 @@ sub not_found {
    my $self = shift;
    
    response->status(404);
-   response->body('page not found for url <i>' . request->uri . '</i>');
+   response->message('page not found');
 }
 
 sub not_modified {
    my $self = shift;
    
    response->status(304);
+   response->message('not modified');
    response->body('');
 }
 
@@ -319,14 +320,14 @@ sub method_not_allowed {
    my $self = shift;
    
    response->status(405);
-   response->body('method not allowed for url <i>' . request->uri . '</i>');
+   response->message('not allowed');
 }
 
 sub access_denied {
    my $self = shift;
    
    response->status(403);
-   response->body('access_denied for action <i>' . request->action . '</i>');
+   response->message('access_denied');
 }
 
 # ---------------------------------------------------------------------------
@@ -510,21 +511,15 @@ sub render_as_html {
 sub render_as_json {
    my $self = shift;
       
-   assert defined(response->body), "render_as_json: no response body defined!";
    timer_start("render_as_json");
    response->content_type('text/javascript');
-   # FIXME
-   # if (response->body)
-   # 
-   # 
-   # if (response->status >= 300) {
-   #    response->body($self->encode_js({
-   #       %{$self->_errors},
-   #       'body' => $body,
-   #       'status' => response->status,
-   #    }, { 'pretty' => response->pretty }));
-   #    response->status(200) if request->param->fake;
-   # }
+   my $body = response->body || {};
+   $body->{'error'} ||= $self->_errors if response->status >= 300;
+   $body->{'status'} ||= response->status;
+   $body->{'message'} ||= response->status =~ /^2\d\d$/
+      ? 'OK'
+      : response->message;
+   response->body($self->encode_js($body, { 'pretty' => response->pretty }));
    response->write($self->render_template($self->MASTER_TEMPLATE_JSON));
    timer_end("render_as_json");
 }
