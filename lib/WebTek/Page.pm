@@ -92,6 +92,7 @@ sub _init {
                if (request->headers->{'If-None-Match'} eq $digest) {
                   my $method = "$class\::$subname";
                   log_debug("send not_modified because of ETag in $method");
+                  response->no_cache(1);
                   return $self->not_modified;
                } else {
                   $coderef->($self);
@@ -109,6 +110,8 @@ sub _init {
                'name' => "$class\-after-action-$subname",
                'method' => sub {
                   return if not request->is_get
+                     or session->user
+                     or response->status ne 200
                      or response->no_cache
                      or request->no_cache
                      or request->param->no_cache;
@@ -440,7 +443,9 @@ sub message :Macro
    #... find language for request
    $params{'language'} ||= request->language;
    #... render message
-   my $key = WebTek::Cache::key($params{'language'}, $params{'key'});
+   my $k = $params{'key'} || $params{$params{'language'}};
+   return "" unless $k;
+   my $key = WebTek::Cache::key($params{'language'}, $k);
    my $compiled = $Messages{ref $self}{$key};
    if (config->{'code-reload'} or not $compiled) {
       my $message = WebTek::Message->message(%params);
@@ -517,7 +522,7 @@ sub render_as_json {
    #       %{$self->_errors},
    #       'body' => $body,
    #       'status' => response->status,
-   #    }));
+   #    }, { 'pretty' => response->pretty }));
    #    response->status(200) if request->param->fake;
    # }
    response->write($self->render_template($self->MASTER_TEMPLATE_JSON));

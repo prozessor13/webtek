@@ -11,6 +11,7 @@ sub prepare {
    #... prepare params
    my $params = $params{'params'};
    foreach my $key (keys %$params) {
+      Encode::_utf8_on($params->{$key}) unless ref $params->{$key};
       $params->{$key} = [$params->{$key}] if ref $params->{$key} ne 'ARRAY';
    }
    

@@ -102,10 +102,12 @@ sub script :Info(script <filename> -> starts a script for this app) {
    my $file = app->dir . '/' . $argv->[0];
    assert -e $file, "script-filename not exists!";
    shift @::argv;
-   assert(
+   my $ok = eval {
       WebTek::Module->do($file),
-      "error during script, details: $@, $!"
-   );
+      DB->commit;
+      1;
+   } or do { DB->rollback };
+   assert $ok, "error during script, details: $@, $!";
    print "done...\n";
 }
 
@@ -232,11 +234,12 @@ sub migrate
       foreach my $name (grep { not $alreay_done->($_) } $list->()) {
          print "do an $cmd migration of $name\n";
          my $ok = eval {
-            WebTek::Module->do("".$fname->($name));
+            WebTek::Module->do("" . $fname->($name));
             main::up();
+            DB->commit;
             1;
-         };
-         assert($ok, "error during migration $name, details: $@");
+         } or do { DB->rollback };
+         assert $ok, "error during migration $name, details: $@";
          $history->($name);
       }
    } elsif ($cmd eq 'down') {
@@ -245,9 +248,10 @@ sub migrate
          my $ok = eval {
             WebTek::Module->do("".$fname->($name));
             main::down();
+            DB->commit;
             1;
-         };
-         assert($ok, "error during migration $name, details: $@");
+         } or do { DB->rollback };
+         assert $ok, "error during migration $name, details: $@";
          $history->($name);
          last;
       }

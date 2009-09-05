@@ -100,7 +100,7 @@ sub files {
             push @files, @{_files($file, $files)};
          }
       }
-      
+      closedir $fh;
       return \@files;
    }
    
@@ -179,7 +179,7 @@ sub merge_static_files {
 sub load {
    my ($class, $package) = @_;
 
-   eval "require $package; 1" or throw "cannot load '$package', details $@";   
+   eval "require $package; 1" or throw "cannot load '$package', details: $@";   
 }
 
 1;

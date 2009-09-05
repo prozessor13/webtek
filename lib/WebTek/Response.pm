@@ -13,13 +13,15 @@ use WebTek::Config qw( config );
 use WebTek::Request qw( request );
 use WebTek::Exception;
 use WebTek::Attributes qw( MODIFY_CODE_ATTRIBUTES );
-use WebTek::Data::Struct  qw( struct );
+use WebTek::Data::Date qw( date );
+use WebTek::Data::Struct qw( struct );
 use WebTek::Export qw( response );
 use base qw( WebTek::Handler );
 
 make_accessor('messages', 'Hander');
 make_accessor('status', 'Macro');
 make_accessor('content_type', 'Macro');
+make_accessor('charset', 'Macro');
 make_accessor('body', 'Macro');
 make_accessor('action', 'Macro');
 make_accessor('title', 'Macro');
@@ -28,6 +30,7 @@ make_accessor('buffer');
 make_accessor('headers');
 make_accessor('cookies');
 make_accessor('no_cache');
+make_accessor('pretty');
 
 our $Response;
 
@@ -37,9 +40,13 @@ sub init {
    my $self = shift->new;
 
    $self->status(200);
-   $self->headers({});
+   $self->headers({
+      'Cache-Control' => 'no-cache',
+      'Expires' => date('now')->to_rfc_822,
+   });
    $self->cookies({});
-   $self->content_type('text/html; charset=' . uc(config->{'charset'}));
+   $self->charset(config->{'charset'});
+   $self->content_type('text/html');
    $self->format(request->format);
    $self->messages(WebTek::Response::Message->new);
 

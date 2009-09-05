@@ -67,6 +67,8 @@ sub import {
       WebTek::Model::DATA_TYPE_DATE DATA_TYPE_DATE
       WebTek::Model::DATA_TYPE_BLOB DATA_TYPE_BLOB
       WebTek::Model::DATA_TYPE_STRUCT DATA_TYPE_STRUCT
+      WebTek::Model::DATA_TYPE_JSON DATA_TYPE_JSON
+      WebTek::Model::DATA_TYPE_PERL DATA_TYPE_PERL
    ));
 }
 
