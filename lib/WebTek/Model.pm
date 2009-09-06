@@ -21,6 +21,7 @@ use Encode qw( _utf8_on decode encode_utf8 );
 our %Primary_keys;
 our %Columns;
 our %Has_a;
+our %Real;
 
 make_accessor('_in_db');               # boolean
 make_accessor('_checked');             # boolean

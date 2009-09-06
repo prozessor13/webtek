@@ -1,3 +1,5 @@
+package WebTek::Handler;
+
 sub add_macro :Macro
    :Info(numerical addition)
    :Param(value1="12.3")
@@ -7,3 +9,5 @@ sub add_macro :Macro
    
    return $params{'value1'} + $params{'value2'};
 }
+
+1;

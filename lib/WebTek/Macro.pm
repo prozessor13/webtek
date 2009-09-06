@@ -40,8 +40,10 @@ sub init {
       my ($self, %params) = @_;
 
       WebTek::Output->push;
-      my $out = $coderef->($self, %params);
+      my $out = eval { $coderef->($self, %params) };
+      my $die = $@;
       my $print = WebTek::Output->pop;
+      die($print ? "$print$die" : $die) if $die;
       return $print ? "$print$out" : $out;
    };
    

@@ -6,7 +6,6 @@ package WebTek::Dispatcher;
 # process the request
 
 use strict;
-use WebTek::Cache;
 use WebTek::Parent;
 use WebTek::Exception;
 use WebTek::Event qw( event );
@@ -15,6 +14,7 @@ use WebTek::Logger qw( log_debug );
 use WebTek::Response qw( response );
 use WebTek::Filter qw( decode_url );
 use WebTek::Timing qw( timer_start timer_end );
+require WebTek::Cache;
 
 sub dispatch {
    my ($class, $root) = @_; # $root isa WebTek::Page

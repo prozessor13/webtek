@@ -1,3 +1,5 @@
+package WebTek::Handler;
+
 sub and_macro :Macro 
    :Info(combine two values with logical and)
    :Param(value1="abc")
@@ -7,3 +9,5 @@ sub and_macro :Macro
    
    return $params{'value1'} && $params{'value2'};
 }
+
+1;

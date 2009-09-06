@@ -1,0 +1,43 @@
+.message {
+  color: orange;
+}
+
+.formElementWithError {
+   background-color: orange;
+}
+
+code {
+   overflow: auto;
+   width: 100%;
+   display: block;
+   border-left: 1px solid #aaaaaa;
+   background-color: #eaeaea;
+}
+
+#pagination {
+   text-align: center;
+   margin:10px auto 15px auto;
+   text-align:center;
+}
+
+#pagination a {
+   padding: 2px 5px;
+   margin: 2px;
+   border: solid 1px #ddd;
+   text-decoration: none;
+   color:#2a88ac;
+}
+
+#pagination a:visited {
+   padding: 2px 5px;
+   margin: 2px;
+   border: solid 1px #ddd;
+   text-decoration: none;
+}
+
+#pagination a:hover {
+   color: #fff;
+   background: #2a88ac;
+   border-color: #f4f4f4;
+   text-decoration: none;
+}

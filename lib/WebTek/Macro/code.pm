@@ -1,3 +1,5 @@
+package WebTek::Page;
+
 sub code :Macro
    :Info(executes perlcode and prints the result in the template)
    :Param(eval="some perl code")
@@ -12,3 +14,5 @@ sub code :Macro
    return $@ if $@ and $params{'debug'};
    return $html;
 }
+
+1;
