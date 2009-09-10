@@ -511,26 +511,36 @@ sub update {
    $self->_update($params);
 }
 
-#... fetch an lazy object from the db FIXME!
+#... fetch an lazy object from the db
 sub _fetch {
    my $self = shift;
    my $class = ref $self;
 
-   #... prepare params
-   my %params = map { $_ => $self->$_() } @{$self->_lazy};
-
-   #... check if all primay keys are defined
-   foreach (@{$self->primary_keys}) {
-      WebTek::Exception->throw("$self->_fetch: primary-key '$_' don't exists!")
-         unless exists $params{$_};
-   }
+   #... get primary keys
+   my %params = map {
+      WebTek::Exception->throw("$class->_fetch: primary-key '$_' don't exist!")
+         unless exists $self->{'content'}->{$_};      
+      $_ => $self->{'content'}->{$_};
+   } @{$self->primary_keys};
    
    #... get obj
    my $obj = $class->find_one(%params) or WebTek::Exception->
       throw("$self->_fetch: cannot find db-entry for " . struct(\%params));
+   
+   #... find lazy content
+   my @lazy = map $_->{'name'}, grep {
+      !$params{$_->{'name'}} && exists $self->{'content'}->{$_->{'name'}};
+   } @{$self->columns};
 
    #... copy obj to self
-   $self->{$_} = $obj->{$_} foreach (keys %$obj);
+   $self->_in_db(1);
+   $self->_modified(@lazy ? 1 : 0);
+   $self->_lazy(\@lazy);
+   $self->{'_persistent_content'} = $obj->{'_persistent_content'};
+   foreach my $key (keys %{$obj->{'content'}}) {
+      next if exists $self->{'content'}->{$key};
+      $self->{'content'}->{$key} = $obj->{'content'}->{$key};
+   }
 }
 
 # --------------------------------------------------------------------------
@@ -586,8 +596,9 @@ sub _populate {
          $self->{'has_a'}->{$accessor} = $f_keys->{$accessor};
       #... create lazy f_key object
       } elsif (defined $self->{'content'}->{$column}) {
-         $self->{'has_a'}->{$accessor} = 
-            $model->$constructor('id' => $self->{'content'}->{$column});
+         my $obj = $model->$constructor('id' => $self->{'content'}->{$column});
+         $obj->_in_db(1) if $obj->can('_in_db');
+         $self->{'has_a'}->{$accessor} = $obj;
       } else {
          $self->{'has_a'}->{$accessor} = undef;
       }
@@ -916,6 +927,7 @@ sub _check {
    CHECK: foreach my $column (@{$self->columns}) {
       my $name = $column->{'name'};
       my $content = $self->{'content'}->{$name};
+      next CHECK unless grep $_ eq $name, @{$self->_lazy};
       my $value = ref $content ? $content->to_db($self->_db) : $content;
 
       #... dont check the id-field when model is not in db

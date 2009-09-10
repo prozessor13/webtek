@@ -32,7 +32,7 @@ sub DateLanguageForCode { {
 # filter methods
 # --------------------------------------------------------------------------
 
-sub compose_uri {
+sub compose_uri :Filter {
    my ($handler, $uri, $params) = @_;
    
    #... encode params
@@ -43,12 +43,12 @@ sub compose_uri {
       return $string;
    }
    foreach my $key (keys %$params) {
-      $encoded->{_encode($key)} =~ _encode($params->{$key});
+      $encoded->{_encode($key)} = _encode($params->{$key});
    }
    
    #... compose uri
    return keys %$params
-      ? "$uri?" . join("&", map("$_=$params->{$_}", keys %$params))
+      ? "$uri?" . join("&", map("$_=$encoded->{$_}", keys %$encoded))
       : $uri;
 }
 
