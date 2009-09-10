@@ -132,7 +132,10 @@ sub translate :Info(translate <language>,... -> generate .po files) {
                  "msgstr \"Content-Type: text/plain; charset=UTF-8\"\n\n";
             foreach my $key (@missing_keys) {
                my $src = @{$key->[1]} ? "#: ".join(",",@{$key->[1]})."\n" : "";
-               $content .= "$src\msgid \"$key->[0]\"\nmsgstr \"\"\n\n";
+               my $msgid = $key->[0];
+               $msgid =~ s/\n/\\n/g;
+               $msgid =~ s/"/\"/g;
+               $content .= "$src\msgid \"$msgid\"\nmsgstr \"\"\n\n";
             }
             WebTek::Util::write($file, $content);
          }
