@@ -1,3 +1,5 @@
+package WebTek::Handler;
+
 sub equals_macro :Macro 
    :Info(equals to values and returns the strings 0 or 1)
    :Param(value1="abc")
@@ -7,3 +9,5 @@ sub equals_macro :Macro
    
    return $params{'value1'} eq $params{'value2'} ? 1 : 0;
 }
+
+1;

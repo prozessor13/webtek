@@ -48,10 +48,13 @@ sub can_handler {
 sub can_macro {
    my ($self, $name) = @_;
    
-   my $coderef = $self->can("$name\_macro") || $self->can($name)
-      || WebTek::Macro->load($name)
-      && $self->can("$name\_macro") || $self->can($name);
-   return WebTek::Attributes->is_macro($coderef) ? $coderef : undef;
+   my $coderef = $self->can("$name\_macro") || $self->can($name);
+   return $coderef if WebTek::Attributes->is_macro($coderef);
+   return eval {
+      WebTek::Macro->load($name);
+      $coderef = $self->can("$name\_macro") || $self->can($name);
+      WebTek::Attributes->is_macro($coderef) ? $coderef : undef;
+   }
 }
 
 sub can_filter {

@@ -1,3 +1,5 @@
+package WebTek::Handler;
+
 sub foreach_macro :Macro
    :Info(render a template for each item in a list)
    :Param(list="<% some_list %>")
@@ -50,3 +52,5 @@ sub foreach_macro :Macro
    $self->handler($params{'iterator'}, undef);
    return $output;
 }
+
+1;
