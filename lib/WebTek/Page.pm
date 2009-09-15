@@ -192,10 +192,9 @@ sub _init {
          push @macros, [$subname, $params];
          #... create wrapper for macro print output
          my $wrapper = sub {
-            my ($self, %params) = @_;
-
+            my @args = @_;
             WebTek::Output->push;
-            my $out = $coderef->($self, %params);
+            my $out = $coderef->(@args);
             my $print = WebTek::Output->pop;
             return $print ? "$print$out" : $out;
          };
