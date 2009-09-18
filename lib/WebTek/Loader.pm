@@ -113,7 +113,7 @@ sub load_configs {
    my @loaded;
    foreach my $dir (grep -d, map "$_/config", @{app->dirs}) {
       foreach my $file (@$files) {
-         next unless $file =~ /^$dir\/([^\/]+?)(\.([^\/]+))?\.config$/;
+         next unless $file =~ /^$dir\/(.+?)(\.([^\/]+))?\.config$/;
          my ($name, $env) = ($1, $3);
          next if grep { $name eq $_ } @loaded;
          next if $env and not grep { $_ eq $env } @{app->env};
