@@ -53,9 +53,12 @@ sub get {
 
 sub get_multi {
    my ($self, @keys) = @_;
-   my %hash = map { _utf8_off($_); $_ => undef } @keys;
+   my %hash = map { my $k = $_; _utf8_off($k); $k => undef } @keys;
    log_error $$self->errmsg($$self->ecode) if $$self->mget(\%hash) eq -1;
-   $hash{$_} = Storable::thaw($hash{$_}) foreach (keys %hash);
+   foreach (keys %hash) {
+      my $k = $_; _utf8_on($k);
+      $hash{$k} = Storable::thaw($hash{$_});
+   }
    return \%hash;
 }
 
