@@ -56,8 +56,11 @@ sub get_multi {
    my %hash = map { my $k = $_; _utf8_off($k); $k => undef } @keys;
    log_error $$self->errmsg($$self->ecode) if $$self->mget(\%hash) eq -1;
    foreach (keys %hash) {
-      my $k = $_; _utf8_on($k);
-      $hash{$k} = Storable::thaw($hash{$_});
+      my ($k1, $k2) = ($_, $_);  # stupid perl5.8 and perl5.10 bug
+      _utf8_on($k2);
+      my $v = Storable::thaw($hash{$_});
+      $hash{$k1} = $v;
+      $hash{$k2} = $v;
    }
    return \%hash;
 }
