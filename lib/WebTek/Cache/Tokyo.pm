@@ -7,6 +7,7 @@ package WebTek::Cache::Tokyo;
 
 use strict;
 use Storable qw( );
+use Encode qw( encode decode );
 use WebTek::Config qw( config );
 use WebTek::Logger qw( log_error );
 use WebTek::Data::Struct qw( struct );
@@ -23,7 +24,7 @@ sub new {
 
 sub set {
    my ($self, $key, $value) = @_;
-   utf8::encode($key);
+   $key = encode("UTF-8", $key);
    my $ref = ref $value ? $value : \$value;
    log_error $$self->errmsg($$self->ecode)
       unless my $return = $$self->put($key, Storable::nfreeze($ref));
@@ -32,7 +33,7 @@ sub set {
 
 sub add {
    my ($self, $key, $value) = @_;
-   utf8::encode($key);
+   $key = encode("UTF-8", $key);
    log_error $$self->errmsg($$self->ecode)
       unless my $return = $$self->putkeep($key, Storable::nfreeze($value));
    return $return;
@@ -40,21 +41,19 @@ sub add {
 
 sub get {
    my ($self, $key) = @_;
-   utf8::encode($key);
+   $key = encode("UTF-8", $key);
    return Storable::thaw($$self->get($key));
 }
 
 sub get_multi {
    my ($self, @keys) = @_;
    my %hash = map {
-      my $k = $_;
-      utf8::encode($k);
-      $k => undef
+      my $k = encode("UTF-8", $_);
+      $k => undef;
    } @keys;
    log_error $$self->errmsg($$self->ecode) if $$self->mget(\%hash) eq -1;
    foreach (keys %hash) {
-      my $k = $_;
-      utf8::decode($k);
+      my $k = decode("UTF-8", $_);
       $hash{$k} = Storable::thaw($hash{$_});
    }
    return \%hash;
@@ -62,7 +61,7 @@ sub get_multi {
 
 sub delete {
    my ($self, $key) = @_;
-   utf8::encode($key);
+   $key = encode("UTF-8", $key);
    log_error $$self->errmsg($$self->ecode)
       unless my $return = $$self->out($key);
    return $return;
@@ -70,7 +69,7 @@ sub delete {
 
 sub incr {
    my ($self, $key, $incr) = @_;
-   utf8::encode($key);
+   $key = encode("UTF-8", $key);
    log_error $$self->errmsg($$self->ecode)
       unless defined(my $value = $$self->addint($key, $incr));
    return $value;
@@ -83,7 +82,7 @@ sub decr {
 
 sub find {
    my ($self, $prefix, $max) = @_;
-   utf8::encode($prefix);
+   $prefix = encode("UTF-8", $prefix);
    return $$self->fwmkeys($prefix, $max);
 }
 
