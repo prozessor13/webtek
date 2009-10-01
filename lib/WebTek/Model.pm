@@ -541,6 +541,10 @@ sub _fetch {
       next if exists $self->{'content'}->{$key};
       $self->{'content'}->{$key} = $obj->{'content'}->{$key};
    }
+   foreach my $key (keys %{$obj->{'has_a'}}) {
+      next if exists $self->{'has_a'}->{$key};
+      $self->{'has_a'}->{$key} = $obj->{'has_a'}->{$key};
+   }
 }
 
 # --------------------------------------------------------------------------
