@@ -796,6 +796,7 @@ sub message :Macro
    my $k = $params{'key'} || $params{$params{'language'}};
    return "" unless $k;
    my $key = WebTek::Cache::key($params{'language'}, $k);
+   $key .= ",$params{'default'}" if defined $params{'default'};
    my $compiled = $Messages{ref $self}{$key};
    if (config->{'code-reload'} or not $compiled) {
       my $message = WebTek::Message->message(%params);
