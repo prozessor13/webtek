@@ -227,19 +227,19 @@ sub foreach_macro :Macro
       "handler can only render strings, not templates"
    );
 
-   my @output;
-   my $p = {};
+   my ($p, @output);
    foreach my $item (@{$params{'list'}}) {
       if (not ref $item) {
          assert($params{'iterator'}, "no iterator defined");
-         $p = { $params{'iterator'} => $item };
+         $p = { %params, $params{'iterator'} => $item };
       } elsif (ref $item eq 'HASH') {
-         $p = $item;
+         $p = { %params, %$item };
       } elsif (ref $item eq 'ARRAY') {
-         $p = { map { $_ => $item->[$_] } (0 .. scalar(@$item)-1) };
+         $p = { %params, map { $_ => $item->[$_] } (0 .. scalar(@$item)-1) };
       } else {
          assert($params{'iterator'}, "no iterator defined");
-         $self->handler($params{'iterator'}, $item);         
+         $self->handler($params{'iterator'}, $item);
+         $p = { %params };
       }
       if ($params{'do'}) {
          push @output, $self->render_string($params{'do'}, $p);

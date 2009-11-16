@@ -245,11 +245,16 @@ sub activate_urls :Filter {
          my $href = $1;
          my $display = $3 ? substr($3, 1) : $href;
          if ($href =~ /^www./) { $href = "http://$href"; }
-         a_tag({'href' => $href, 'display' => $display, 'target' => '_blank'});
+         a_tag({
+            %$params,
+            'href' => $href,
+            'display' => $display,
+            'target' => '_blank'
+         });
       -eg;
    $string =~ # convert email-adresses to links
       s-(\w[^\s,;:&]*\@[^\s,;:&]*\w)-
-         a_tag({'href' => "mailto:$1", 'display' => $1 });
+         a_tag({%$params, 'href' => "mailto:$1", 'display' => $1 });
       -eg;
  
    return $string;
