@@ -21,6 +21,8 @@ sub date {
    my $date = shift;       # date or time
    my $timezone = shift;   # optional timezone
    
+   $date = $date->to_time if ref($date) eq __PACKAGE__;
+   
    $timezone ||= eval { WebTek::Request::request()->timezone };
    $timezone ||= config->{'default-timezone'} || 'GMT';
 

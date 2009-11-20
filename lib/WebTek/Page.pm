@@ -194,8 +194,9 @@ sub _init {
          my $wrapper = sub {
             my @args = @_;
             WebTek::Output->push;
-            my $out = $coderef->(@args);
+            my $out = eval { $coderef->(@args) };
             my $print = WebTek::Output->pop;
+            throw $@ if $@;
             return $print ? "$print$out" : $out;
          };
          #... create wrapper for macro cache

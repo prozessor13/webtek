@@ -251,4 +251,20 @@ sub foreach_macro :Macro
    return join $params{'join'}, @output;
 }
 
+sub each_macro :Macro
+   :Param(hash="<% some_list %>")
+   :Param(do="some template code")
+   :Param(template="list_item", alternativ to the do parameter you can define a template which shoud be rendered for each item)
+{
+   my ($self, %params) = @_;
+   
+   my $hash = delete $params{'hash'};
+   WebTek::Logger::log_info("hash: $hash");
+   assert($hash, "no hash defined");
+   assert(reftype $hash eq 'HASH', "list not type of HASH");
+   
+   my @list = map { { 'key' => $_, 'value' => $hash->{$_} } } keys %{$hash};
+   return $self->foreach_macro(%params, 'list' => \@list);
+}
+
 1;
