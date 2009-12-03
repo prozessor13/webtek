@@ -41,8 +41,9 @@ sub init {
 
    $self->status(200);
    $self->headers({
+      'Pragma' => 'no-cache',
       'Cache-Control' => 'no-cache',
-      'Expires' => date('now')->to_rfc_822,
+      'Expires' => '-1',
    });
    $self->cookies({});
    $self->charset(config->{'charset'});
