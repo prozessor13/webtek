@@ -54,11 +54,9 @@ mkdir("$appdir/$appname/scripts/test") or die $!;
 #... create standard modules and startup.pl
 print "create files:\n";
 copy("Handler.pm", "Handler.pm");
-copy("webtek.cgi", "scripts/webtek.cgi");
 copy("Root.pm", "Page/Root.pm");
 copy("appPage.pm", "Page/Page.pm");
 copy("db.config", "config/db.config");
-copy("cgi.config", "config/cgi.config");
 copy("db.migrate.config", "config/db.migrate.config");
 copy("webtek.config", "config/webtek.config");
 copy("webtek.dev.config", "config/webtek.dev.config");
@@ -69,11 +67,7 @@ copy("master.tpl", "templates/others/master.tpl");
 copy("master.ajax.tpl", "templates/others/master.ajax.tpl");
 copy("master.json.tpl", "templates/others/master.json.tpl");
 copy("master.error.tpl", "templates/others/master.error.tpl");
-copy("comet.tpl", "templates/others/comet.tpl");
 copy("index_root.tpl", "templates/Root/index.tpl");
-copy("de.po", "messages/de.po");
-copy("en.po", "messages/en.po");
-copy("prototype.js", "static/prototype.js");
 copy("webtek.css", "static/webtek.css");
 copy("webtek.js", "static/webtek.js");
 copy("pagination_container.tpl", "templates/others/pagination/container.tpl");
@@ -84,16 +78,16 @@ copy("pagination_next_page.tpl", "templates/others/pagination/next_page.tpl");
 copy("pagination_filler.tpl", "templates/others/pagination/filler.tpl");
 copy("webtek", "webtek"); system("chmod 755 $appdir/$appname/webtek");
 
-print "\nand add this to your httpd.conf:\n";
+print '\nand add this to your httpd.conf:\n';
 http_conf();
-print "now restart your webserver and load http://localhost/".lc($appname)."\n";
+print 'now restart your webserver and load http://localhost/'.lc($appname).'\n';
 
 #... copy files
 sub copy {
    my $infile = shift;
    my $outfile = shift;
    
-   my $file = "";
+   my $file = '';
    print "  $appdir/$appname/$outfile\n";
    open (IN, "$appdir/../extra/templates/$infile") or die $!;
    open (OUT, "> $appdir/$appname/$outfile") or die $!;

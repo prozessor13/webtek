@@ -1,1 +1,4 @@
-<a href="<% href %>?page=<% param.page %>">Next</a>
+<% link
+   href="<% href %>?page=<% param.page %>"
+   display="<% message key="Next" %>"
+%>

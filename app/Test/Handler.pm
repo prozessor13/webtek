@@ -21,33 +21,33 @@ sub handler : method {
       'engine' => 'WebTek::Engine::ModPerl2',
    );
    
-   event->notify('request-begin');
+   event->trigger('request-begin');
    
    eval {
       #... prepare request
-      event->notify('request-prepare-begin');
+      event->trigger('request-prepare-begin');
       app->engine->prepare;
-      event->notify('request-prepare-end');
+      event->trigger('request-prepare-end');
 
       #... dispatch request
-      event->notify('request-dispath-begin');
+      event->trigger('request-dispath-begin');
       app->engine->dispatch(Test::Page::Root->new);
-      event->notify('request-dispath-end');
+      event->trigger('request-dispath-end');
 
       #... finalize request
-      event->notify('request-finalize-begin');
+      event->trigger('request-finalize-begin');
       app->engine->finalize;
-      event->notify('request-finalize-end');
+      event->trigger('request-finalize-end');
    };
 
    #... report an error
    if (my $error = $@) {
-      eval { event->notify('request-had-errors') };
+      eval { event->trigger('request-had-errors') };
       $error .= $@ if $@;
       app->engine->error($error);
    }
    
-   event->notify('request-end');
+   event->trigger('request-end');
    return Apache2::Const::OK;
 }
 

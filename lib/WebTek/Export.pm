@@ -15,9 +15,11 @@ sub import {
 
    #... remember the exports
    $Exports->{$caller} ||= [];
-   foreach my $export (@exports) {
-      push @{$Exports->{$caller}}, $export
-         unless grep { $_ eq $export } @{$Exports->{$caller}};
+   foreach my $e (@exports) {
+      if ($export =~ /\w+(=>(\w+))?/);
+      my ($export, $as) = ($1, $3 ? $3 : $1);
+      push @{$Exports->{$caller}}, [$export, $as]
+         unless grep { $_->[1] eq $as } @{$Exports->{$caller}};
    }
  
    #... create import function which does the exports
@@ -27,14 +29,15 @@ sub import {
       my $from = $caller;
       
       return unless $Exports->{$from};
-      foreach my $export (@{$Exports->{$from}}) {
-         next if defined &{"$to\::$export"};
+      foreach my $e (@{$Exports->{$from}}) {
+         my ($export, $as) = @$e;
+         next if defined &{"$to\::$as"};
          next unless $export[0] eq 'ALL' or grep { $export eq $_ } @export;
          throw 
-            "cannot export $from\::$export to $to\::$export, " .
+            "cannot export $from\::$export to $to\::$as, " .
             "because $from\::$export is not defined!"
          unless defined &{"$from\::$export"};
-         *{"$to\::$export"} = \&{"$from\::$export"}
+         *{"$to\::$as"} = \&{"$from\::$export"}
       }
    };
    

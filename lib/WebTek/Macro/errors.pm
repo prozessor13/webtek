@@ -13,7 +13,7 @@ sub errors :Macro
    #... create the error msg
    my $sep = exists $params{'separator'} ? $params{'separator'} : "<br />";
    return join $sep, map {
-      $self->message('key' => $self->error_key_for($_), %params)
+      $self->message('key' => $self->error_on($_), %params)
    } @keys;
 }
 

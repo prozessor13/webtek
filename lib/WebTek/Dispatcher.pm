@@ -35,15 +35,13 @@ sub dispatch {
    }
    
    #... create page structure
-   timer_start("generate pages");
+   timer_start('generate pages');
    request->path(WebTek::Request::Path->new);
    my ($path, $action, $format) = $class->process_path(
-      $class->decode_url(request->path_info),
-      $root,
-      request->path,
+      $class->decode_url(request->path_info), $root, request->path
    );
    my $page = $path->page;
-   timer_end("generate pages");
+   timer_end('generate pages');
 
    #... remember things in request
    request->page($page);
@@ -51,11 +49,9 @@ sub dispatch {
    request->format($format) if $format;
 
    #... call the action
-   event->notify('before-request-action', $page);
-   event->notify(ref($page) . "-before-action-$action", $page);
+   event->trigger(name => 'before-action', args => [ $page, $action ]);
    $page->do_action($action);
-   event->notify(ref($page) . "-after-action-$action", $page);
-   event->notify('after-request-action', $page);
+   event->trigger(name => 'after-action', args => [ $page, $action ]);
 }
 
 sub process_path {
@@ -63,14 +59,13 @@ sub process_path {
    
    $path = $path || WebTek::Request::Path->new;
    push @$path, $page;
-   my $action = "index";
+   my $action = 'index';
    my $format = '';
    #... process path
    PATH: while ($path_info and $path_info ne '/') {
       #... check for an action
       if ($path_info =~ /^\/([^\/]+?)(\.(\w+))?$/ and $page->can_action($1)) {
-         $action = $1;
-         $format = $3;
+         ($action, $format) = ($1, $3);
          last;
       }
       #... check for a childpage
@@ -90,7 +85,7 @@ sub process_path {
          }
       }
       #... path cannot processed
-      $action = "";
+      $action = '';
       last;
    }
 

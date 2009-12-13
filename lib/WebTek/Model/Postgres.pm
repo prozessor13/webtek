@@ -13,30 +13,28 @@ sub _columns {
    my $columns = shift; # arrayref with all column-info
    
    foreach my $column (@$columns) {
-      my $type = $column->{'type'};
-      my $name = $column->{'name'};
+      my $type = $column->{type};
+      my $name = $column->{name};
       
-      #... find webtek-data-type
+      #... find webtek_data_type
       if ($class->DATATYPES->{$name}) {
-         $column->{'webtek-data-type'} = $class->DATATYPES->{$name}
+         $column->{webtek_data_type} = $class->DATATYPES->{$name}
       } elsif ($name =~ /^(is_|has_|show_)/ || $type =~ /boolean/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_BOOLEAN;
+         $column->{webtek_data_type} = $class->DATA_TYPE_BOOLEAN;
       } elsif ($type =~ /int|double|float|decimal|numeric|real|serial/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_NUMBER;
+         $column->{webtek_data_type} = $class->DATA_TYPE_NUMBER;
       } elsif ($type =~ /bytea/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_BLOB;
-      } elsif ($column->{'type'} =~ /timestamp/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_DATE;
-      } elsif ($column->{'type'} =~ /char|text/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_STRING;
+         $column->{webtek_data_type} = $class->DATA_TYPE_BLOB;
+      } elsif ($type =~ /timestamp/i) {
+         $column->{webtek_data_type} = $class->DATA_TYPE_DATE;
+      } elsif ($type =~ /char|text/i) {
+         $column->{webtek_data_type} = $class->DATA_TYPE_STRING;
       } else {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_UNKNOWN;
+         $column->{webtek_data_type} = $class->DATA_TYPE_UNKNOWN;
       }
    
       #... find default-value
-      $column->{'default'} = $column->{'default'} =~ /'(.*)'::\w/
-         ? $1
-         : $column->{'default'};
+      $column->{default} = $1 if $column->{default} =~ /'(.*)'::\w/;
    }
    $class->SUPER::_columns($columns);
 }

@@ -11,58 +11,56 @@ use WebTek::Exception;
 use WebTek::Util qw( assert make_accessor );
 use WebTek::Attributes qw( MODIFY_CODE_ATTRIBUTES );
 
-make_accessor 'handlers';
+our %Info;
 
 # ----------------------------------------------------------------------------
 # constructors
 # ----------------------------------------------------------------------------
 
 sub new {
-   my $self = bless {}, shift;
-   $self->handlers({});
-   return $self;
+   my $class = shift;
+   my $hash = shift || {};
+   $hash->{_handlers} ||= {};
+   return bless $hash, $class;
 }
 
 # ----------------------------------------------------------------------------
 # instance methods
 # ----------------------------------------------------------------------------
 
-sub handler {
-   my ($self, $name, @handler) = @_;
-   
-   #... set handler
-   return $self->handlers->{$name} = $handler[0] if @handler;
-   #... get handler
-   return $self->handlers->{$name} if $self->handlers->{$name};
-   return $self->$name() if WebTek::Attributes->is_handler($self->can($name));
-
-   throw "$self has no handler '$name'";
-}
-
 sub can_handler {
    my ($self, $name) = @_;
+   my $info = $self->_info('macro');
    
-   return eval { $self->_handler($name) };
+   return $self->_info('handler')->{$name};
 }
 
 sub can_macro {
    my ($self, $name) = @_;
+   my $info = $self->_info('macro');
    
-   my $coderef = $self->can("$name\_macro") || $self->can($name);
-   return $coderef if WebTek::Attributes->is_macro($coderef);
-   return eval {
-      WebTek::Macro->load($name);
-      $coderef = $self->can("$name\_macro") || $self->can($name);
-      WebTek::Attributes->is_macro($coderef) ? $coderef : undef;
-   }
+   return $info->{$name} if exists $info->{$name};
+   return $info->{$name} = eval { WebTek::Macro->load($name) };
 }
 
 sub can_filter {
    my ($self, $name) = @_;
+   my $info = $self->_info('filter');
    
-   my $coderef = $self->can($name)
-      || WebTek::Filter->load($name) && $self->can($name);
-   return WebTek::Attributes->is_filter($coderef) ? $coderef : undef;
+   return $info->{$name} if exists $info->{$name};
+   return $info->{$name} = eval { WebTek::Filter->load($name) };
+}
+
+sub handler {
+   my ($self, $name, @handler) = @_;
+   
+   if (@handler) {
+      assert !$self->can_handler($name), "$self: cannot set handler $name, " .
+         "because its already defined in code via the :Handler attribute";
+      $self->{_handlers}{$name} = $handler[0];
+   }
+   
+   return $self->{_handlers}{$name};
 }
 
 sub render_string {
@@ -76,7 +74,49 @@ sub render_string {
 # internal methods
 # ----------------------------------------------------------------------------
 
-*_handler = \&handler;
+sub _init {
+   my $class = shift;
+   log_debug("$$: init handler $class");
+
+   my ($h, $m, $f) = ({}, {}, {});
+   $self->_reset(undef, { handler => $h, macro => $m, filter => $f });
+   
+   #... extract code-attribute informations
+   foreach (@{WebTek::Attributes->attributes_for_class($class)}) {
+      my ($coderef, $attributes) = @$_;
+      my $name = WebTek::Util::subname_for_coderef($class, $coderef);
+      next unless $name;
+   
+      #... process macros
+      if (grep { /^Macro/ } @$attributes) {
+         WebTek::Macro->init($name, $coderef);
+         $m->{$name} = $coderef;
+      #... process handler
+      } elsif (grep { /^Handler/ } @$attributes) {
+         $h->{$name} = $coderef;
+      } elsif (grep { /^Filter/ } @$attributes) {
+         $f->{$name} = $coderef;
+      }
+   }
+}
+
+sub _reset {
+   my ($self, $type, $set) = @_;
+   my $class = ref $set || $self;
+   
+   return $Info{$class}{$type} = $set if $type;
+   return $Info{$class} = $set;
+}
+
+sub _info { $Info{ref $_[0] || $_[0]}{$_[1]} }
+
+sub _handler {
+   my ($self, $name) = @_;
+   
+   my $coderef = $self->can_handler($name);
+   return $coderef->($self) if $coderef;
+   return $self->{_handlers}{$name} or throw "$self has no handler $name";
+}
 
 sub _macro {
    my ($self, $name, $params) = @_;
@@ -90,10 +130,6 @@ sub _filter {
    
    my $coderef = $self->can_filter($name) or throw "$self has no filter $name";
    return $coderef && $coderef->($self, $string, $params);
-}
-
-sub _info {
-   # FIXME
 }
 
 1;

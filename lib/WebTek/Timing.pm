@@ -17,21 +17,21 @@ our $Indent;
 our $Active;
 
 sub _init {
-   event->register(
-      'name' => 'request-begin',
-      'method' => sub { &init; timer_start('request') },
+   event->observe(
+      name => 'request-begin',
+      method => sub { &init; timer_start('request') },
    );
-   event->register(
-      'name' => 'request-end',
-      'method' => sub { timer_end('request') },
+   event->observe(
+      name => 'request-end',
+      method => sub { timer_end('request') },
    );
-   event->register(
-      'name' => 'request-init-begin',
-      'method' => sub { timer_start('init request') },
+   event->observe(
+      name => 'request-init-begin',
+      method => sub { timer_start('init request') },
    );
-   event->register(
-      'name' => 'request-init-end',
-      'method' => sub { timer_end('init request') },
+   event->observe(
+      name => 'request-init-end',
+      method => sub { timer_end('init request') },
    );   
 }
 
@@ -41,7 +41,7 @@ sub timer_start {
 
    $Indent++;
    $Timing->{$key} = Time::HiRes::time();
-   log_info(("| " x $Indent) . "timer start for '$key'");
+   log_info(('| ' x $Indent) . "timer start for '$key'");
 }
 
 sub timer_end {
@@ -50,12 +50,12 @@ sub timer_end {
 
    assert($Timing->{$key}, "timing key '$key' not found!");
    my $time = Time::HiRes::time() - $Timing->{$key};
-   log_info(("| " x $Indent) . "timer end for '$key' in $time seconds");
+   log_info(('| ' x $Indent) . "timer end for '$key' in $time seconds");
    $Indent--;
 }
 
 sub init {
-   if ($Active = config->{'log-time'}) {
+   if ($Active = config->{log_time}) {
       $Timing = {};
       $Indent = 0;
    }

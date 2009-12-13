@@ -13,41 +13,38 @@ sub _columns {
    my $columns = shift; # arrayref with all column-info
    
    foreach my $column (@$columns) {
-      my $type = $column->{'type'};
-      my $name = $column->{'name'};
+      my $type = $column->{type};
+      my $name = $column->{name};
       
-      #... find webtek-data-type
+      #... find webtek_data_type
       if ($class->DATATYPES->{$name}) {
-         $column->{'webtek-data-type'} = $class->DATATYPES->{$name}
+         $column->{webtek_data_type} = $class->DATATYPES->{$name}
       } elsif ($name =~ /^(is_|has_|show_)/i || $type =~ /bit/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_BOOLEAN;
+         $column->{webtek_data_type} = $class->DATA_TYPE_BOOLEAN;
       } elsif ($type =~ /bit|int|double|float|decimal/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_NUMBER;
+         $column->{webtek_data_type} = $class->DATA_TYPE_NUMBER;
       } elsif ($type =~ /blob/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_BLOB;
-      } elsif ($column->{'type'} =~ /datetime|timestamp/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_DATE;
-      } elsif ($column->{'type'} =~ /char|binary|text|enum|set/i) {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_STRING;
+         $column->{webtek_data_type} = $class->DATA_TYPE_BLOB;
+      } elsif ($type =~ /datetime|timestamp/i) {
+         $column->{webtek_data_type} = $class->DATA_TYPE_DATE;
+      } elsif ($type =~ /char|binary|text|enum|set/i) {
+         $column->{webtek_data_type} = $class->DATA_TYPE_STRING;
       } else {
-         $column->{'webtek-data-type'} = $class->DATA_TYPE_UNKNOWN;
-      }   
+         $column->{webtek_data_type} = $class->DATA_TYPE_UNKNOWN;
+      }
    }
    $class->SUPER::_columns($columns);
 }
 
-sub _do_do_action {
+sub _do_action {
    my ($self, $sql, @args) = @_;
    
-   unless (defined(eval {
-      $self->SUPER::_do_do_action($sql, @args);
-      1;
-   })) {
-      my $err = $@;
-      if ($err =~ /Duplicate entry .* for key (\d+)/) {
-         die(WebTek::DB::UniqueConstraintViolatedException->create($err, $1));
-      }
-      die($err);
+   eval {
+      $self->_db->do_action($sql, @args);
+   } or do {
+      die $@ unless $@ =~ /Duplicate entry .* for key (\d+)/;
+      $self->_set_errors({ $1 => 'alreadyexists' });
+      $self->is_valid("die");
    }
 }
 

@@ -17,21 +17,17 @@ use WebTek::Timing qw( ALL );
 use WebTek::Export qw( DB );
 require WebTek::Config;
 
-our %SharedInstance;
+our %DB;
 
 sub _init {
-   event->register(
+   event->observe(
       'name' => 'request-end',
-      'method' => sub {
-         $_->commit foreach values %{$SharedInstance{app->name}};
-      },
+      'method' => sub { $_->commit foreach values %{$DB{$::appname}} },
       'priority' => 10,
    );
-   event->register(
+   event->observe(
       'name' => 'request-had-errors',
-      'method' => sub {
-         $_->rollback foreach values %{$SharedInstance{app->name}};
-      },
+      'method' => sub { $_->rollback foreach values %{$DB{$::appname}} },
       'priority' => 10,
    );
 }
@@ -40,7 +36,7 @@ sub _init {
 # constants
 # ----------------------------------------------------------------------------
 
-sub PING_INTERVAL { 1 } # check the db-connection every x seconds
+sub PING_INTERVAL { 10 } # check the db-connection every x seconds
 sub DB_VENDOR_MYSQL { 'mysql' }
 sub DB_VENDOR_POSTGRES { 'postgres' }
 sub DB_VENDOR_ORACLE { 'oracle' }
@@ -52,28 +48,28 @@ sub DB_VENDOR_UNKNOWN { 'unknown' }
 
 sub DB {
    my $config = $_[0] || 'db';
-   $SharedInstance{app->name}->{$config} ||= WebTek::DB->new($config);
+   $DB{$::appname}{$config} ||= WebTek::DB->new($config);
 }
 
 sub new {
    my ($class, $config) = @_;
-   return bless { 'config' => $config }, $class;
+   return bless { config => $config }, $class;
 }
 
 sub DESTROY {
-   if ($SharedInstance{app->name}) {
-      foreach my $db (values %{$SharedInstance{app->name}}) {
-         if ($db->{'dbh'}) { $db->{'dbh'}->disconnect }
+   if ($DB{app->name}) {
+      foreach my $db (values %{$DB{$::appname}}) {
+         if ($db->{dbh}) { $db->{dbh}->disconnect }
       }
    }
-   delete $SharedInstance{app->name};
+   delete $DB{$::appname};
 }
 
 # ----------------------------------------------------------------------------
 # get config for the db object
 # ----------------------------------------------------------------------------
 
-sub config { WebTek::Config::config($_[0]->{'config'}) }
+sub config { WebTek::Config::config($_[0]->{config}) }
 
 # ----------------------------------------------------------------------------
 # DBI wrapper methods
@@ -83,35 +79,35 @@ sub connect {
    my $self = shift;
 
    my $dbh = DBI->connect_cached(
-      $self->config->{'connect'},
-      $self->config->{'username'},
-      $self->config->{'password'}
-   ) or throw "DB: cannot connect to database: " . $DBI::errstr;
+      $self->config->{connect},
+      $self->config->{username},
+      $self->config->{password}
+   ) or throw 'DB: cannot connect to database: ' . $DBI::errstr;
    return $dbh;
 }
 
 sub ping {
    my $self = shift;
    
-   return 0 unless $self->{'dbh'};
-   return 1 if ($self->{'last-ping-time'} + PING_INTERVAL) > time;
-   $self->{'last-ping-time'} = time;
-   return $self->{'dbh'}->ping;
+   return 0 unless $self->{dbh};
+   return 1 if ($self->{last_ping_time} + PING_INTERVAL) > time;
+   $self->{last_ping_time} = time;
+   return $self->{dbh}->ping;
 }
 
 sub dbh {
    my $self = shift;
    
    #... check existing connection
-   return $self->{'dbh'} if $self->ping;
+   return $self->{dbh} if $self->ping;
    #... create new connection
-   $self->{'dbh'} = $self->connect;
-   $self->{'dbh'}->{'FetchHashKeyName'} = 'NAME_lc';
-   $self->{'dbh'}->{'AutoCommit'} = 0;
-   if (my $long_read_len = $self->config->{'long-read-length'}) {
-      $self->{'dbh'}->{'LongReadLen'} = $long_read_len;      
+   $self->{dbh} = $self->connect;
+   $self->{dbh}{FetchHashKeyName} = 'NAME_lc';
+   $self->{dbh}{AutoCommit} = 0;
+   if (my $long_read_len = $self->config->{long_read_length}) {
+      $self->{dbh}{LongReadLen} = $long_read_len;      
    }
-   return $self->{'dbh'};
+   return $self->{dbh};
 }
 
 sub vendor {
@@ -127,9 +123,8 @@ sub vendor {
 sub do_action {
    my ($self, $sql, @args) = @_;
    
-   if (config->{'log-sql'}) {
-      log_info("[SQL] $sql with args ('" . join("', '",@args) . "')");
-   }
+   log_info('[SQL] $sql with args ("' . join('","', @args) . '")')
+      if config->{log_sql};
    my $dbh = $self->dbh;
    my $sth = $dbh->prepare($sql)
       or log_fatal "error '".$dbh->errstr."' in $sql: @args";
@@ -141,10 +136,10 @@ sub do_action {
 sub do_query {
    my ($self, $sql, @args) = @_;
    
-   timer_start('do_query') if config->{'log-sql'};
+   timer_start('do_query') if config->{log_sql};
    my $sth = $self->do_action($sql, @args);
    my $result = $sth->fetchall_arrayref({});
-   my $charset = $self->config->{'charset'};
+   my $charset = $self->config->{charset};
    my $is_utf8 = $charset =~ /utf-?8/i;
    if ($sth->err) { log_fatal "error in $sql: @args" }
    foreach my $row (@$result) {
@@ -153,7 +148,7 @@ sub do_query {
          else { $row->{$key} = decode($charset, $row->{$key}) }
       }
    }
-   timer_end('do_query') if config->{'log-sql'};
+   timer_end('do_query') if config->{log_sql};
    return $result;
 }
 
@@ -171,7 +166,7 @@ sub schema {
    my $self = shift;
    
    if ($self->vendor eq DB_VENDOR_ORACLE) {
-      return uc($self->config->{'username'});
+      return uc($self->config->{username});
    } elsif ($self->vendor eq DB_VENDOR_POSTGRES) {
       return 'public';
    } else {
@@ -180,11 +175,11 @@ sub schema {
 }
 
 sub primary_keys {
-   my ($self, $t) = @_; # $t ... table name
-   $t = uc($t) if $self->vendor eq DB_VENDOR_ORACLE;
+   my ($self, $table) = @_;
+   my $t = uc($table) if $self->vendor eq DB_VENDOR_ORACLE;
    
    my @keys = ($self->vendor eq DB_VENDOR_MYSQL)
-      ? map{$_->{'name'}}grep{$_->{'mysql_is_pri_key'}}@{$self->column_info($t)}
+      ? map $_->{name}, grep $_->{mysql_is_pri_key}, @{$self->column_info($t)}
       : $self->dbh->primary_key($self->catalog, $self->schema, $t);
    return \@keys;
 }
@@ -194,7 +189,7 @@ sub column_info {
    $table = uc($table) if $self->vendor eq DB_VENDOR_ORACLE;
 
    #... postgres outputs the names somtimes in qotes (why?)
-   sub _clean { my $name = shift; $name =~s /\W//g; return $name }
+   sub _clean { my $name = shift; $name =~s /\W//g; $name }
 
    #... return either uppercase or lowercase key
    sub _get {
@@ -212,58 +207,27 @@ sub column_info {
    #... create column info for a model
    my @columns = ();
    foreach my $row (@$rows) {
-      my $table_name = _clean($row->{'TABLE_NAME'} || $row->{'table_name'});
+      my $table_name = _clean($row->{TABLE_NAME} || $row->{table_name});
       next unless ($table_name eq $table);
       push @columns, {
-         'pos' => _get($row, 'ordinal_position'),
-         'name' => _clean(lc(_get($row, 'column_name'))),
-         'type' => lc(_get($row, 'type_name')),
-         'length' => _get($row, 'column_size'),
-         'nullable' => _get($row, 'nullable'),
-         'default' => _get($row, 'column_def'),
-         'mysql_is_pri_key' => $row->{'mysql_is_pri_key'},
+         pos => _get($row, 'ordinal_position'),
+         name => _clean(lc(_get($row, 'column_name'))),
+         type => lc(_get($row, 'type_name')),
+         length => _get($row, 'column_size'),
+         nullable => _get($row, 'nullable'),
+         default => _get($row, 'column_def'),
+         mysql_is_pri_key => $row->{mysql_is_pri_key},
       };
    }
-   @columns = sort { $a->{'pos'} <=> $b->{'pos'} } @columns;
-   return \@columns;
+   return [ sort { $a->{pos} <=> $b->{pos} } @columns ];
 }
 
 sub last_insert_id {
    my ($self, $table, $column) = @_;
    
-   my $id = $self->dbh->last_insert_id(
+   return $self->dbh->last_insert_id(
       $self->catalog, $self->schema, $table, $column
-   );
-   # This is necessary on Emerion Web Hosting, I have no idea why.
-   $id = $self->dbh->{'mysql_insertid'} unless defined $id;
-
-   return $id;
-}
-
-=head1 EXCEPTIONS
-
-C<WebTek::DB::UniqueConstraintViolatedException>
-
-This exception has a single attribute 'constraint-name' which is
-the name of the unique constraint which was violated.
-For MySQL this is a number like "1" or "2".
-
-=cut
-
-package WebTek::DB::UniqueConstraintViolatedException;
-
-use base qw( WebTek::Exception );
-use WebTek::Util qw( make_accessor );
-
-make_accessor('constraint_name');
-
-sub create {
-   my ($class_or_self, $msg, $constraint_name) = @_;
-
-   my $self = $class_or_self->SUPER::create($msg);
-   $self->{'constraint_name'} = $constraint_name;
-   
-   return $self;
+   ) || $self->dbh->{mysql_insertid};
 }
 
 1;

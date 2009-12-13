@@ -24,7 +24,7 @@ sub init {
    my ($class, $safe) = @_;    # may init modules safe (no die on error)	
 
    #... register code-reload event
-   event->register(
+   event->observe(
       'name' => 'request-begin',
       'priority' => 1,
       'method' => sub {
@@ -57,6 +57,7 @@ sub init {
    load_configs($files, $safe);
    load_messages($files, $safe);
 
+   WebTek::Event->_init;
    WebTek::Timing->_init;
    WebTek::DB->_init;
    WebTek::Page->_init;
@@ -146,8 +147,8 @@ sub load_perl_modules {
          my $module = $1;
          $module =~ s|/|::|g;
          #... (safe) load module
-         eval { WebTek::Module->load(app->class_prefix . '::' . $module) };
-         if (my $e = $@) { $safe ? log_error($e) : log_fatal($e) }
+         eval { WebTek::Module->load(app->class_prefix . '::' . $module) }
+         or do { $safe ? log_debug($@) : log_fatal($@) }
       }
    }
 }

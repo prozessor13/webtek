@@ -13,41 +13,41 @@ sub handler : method {
    
    #... init application
    WebTek::App->activate($r->dir_config('name')) or WebTek::App->init(
-      'name' => $r->dir_config('name'),
-      'dir' => $r->dir_config('dir'),
-      'env' => [ split ",", $r->dir_config('env') ],
-      'pre-modules' => [ split ",", $r->dir_config('pre-modules') ],
-      'post-modules' => [ split ",", $r->dir_config('post-modules') ],
-      'engine' => 'WebTek::Engine::ModPerl2',
+      name => $r->dir_config('name'),
+      dir => $r->dir_config('dir'),
+      env => [ split ",", $r->dir_config('env') ],
+      libraries => [ split ",", $r->dir_config('libraries') ],
+      modules => [ split ",", $r->dir_config('modules') ],
+      engine => 'WebTek::Engine::ModPerl2',
    );
    
-   event->notify('request-begin');
+   event->trigger(name => 'request-begin');
    
    eval {
       #... prepare request
-      event->notify('request-prepare-begin');
+      event->trigger(name => 'request-prepare-begin');
       app->engine->prepare;
-      event->notify('request-prepare-end');
+      event->trigger(name => 'request-prepare-end');
 
       #... dispatch request
-      event->notify('request-dispath-begin');
+      event->trigger(name => 'request-dispath-begin');
       app->engine->dispatch(<% appname %>::Page::Root->new);
-      event->notify('request-dispath-end');
+      event->trigger(name => 'request-dispath-end');
 
       #... finalize request
-      event->notify('request-finalize-begin');
+      event->trigger(name => 'request-finalize-begin');
       app->engine->finalize;
-      event->notify('request-finalize-end');
+      event->trigger(name => 'request-finalize-end');
    };
 
    #... report an error
    if (my $error = $@) {
-      eval { event->notify('request-had-errors') };
+      eval { event->trigger(name => 'request-had-errors') };
       $error .= $@ if $@;
       app->engine->error($error);
    }
    
-   event->notify('request-end');
+   event->trigger(name => 'request-end');
    return Apache2::Const::OK;
 }
 

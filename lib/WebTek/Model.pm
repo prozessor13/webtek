@@ -6,30 +6,29 @@ package WebTek::Model;
 # superclass of all models
 
 use strict;
-use WebTek::DB qw( DB );
-use WebTek::App qw( app );
-use WebTek::Util qw( assert make_accessor );
-use WebTek::Event qw( event );
-use WebTek::Logger qw( ALL );
-use WebTek::Config qw( config );
+use Encode ();
 use WebTek::Exception;
-use WebTek::Data::Date qw( date );
-use WebTek::Data::Struct  qw( struct );
+use WebTek::Event qw( event=>_event );
+use WebTek::Data::Date qw( date=>_date );
+use WebTek::Logger qw( log_debug log_warning );
+use WebTek::Data::Struct  qw( struct=>_struct );
+use WebTek::Util qw( assert=>__assert make_accessor => __make_accessor );
+use Scalar::Util qw( blessed );
 use base qw( WebTek::Handler );
-use Encode qw( _utf8_on decode encode_utf8 );
 
-our %Primary_keys;
-our %Columns;
-our %Has_a;
 our %Real;
+our %Has_a;
+our %Columns;
+our %Primary_keys;
 
-make_accessor('_in_db');               # boolean
-make_accessor('_checked');             # boolean
-make_accessor('_modified');            # boolean
-make_accessor('_lazy');                # array
-make_accessor('_updated');             # array
-make_accessor('_errors');              # hash
-make_accessor('_persistent_content');  # hash
+__make_accessor '_in_db' ;      # boolean
+__make_accessor '_checked';     # boolean
+__make_accessor '_updated';     # array
+__make_accessor '_errors';      # hash
+__make_accessor '_content';     # hash
+__make_accessor '_f_keys';      # hash
+__make_accessor '_modified';    # hash
+__make_accessor '_accessors';   # hash
 
 # --------------------------------------------------------------------------
 # constants
@@ -41,45 +40,27 @@ sub DATA_TYPE_NUMBER { 2 }
 sub DATA_TYPE_BOOLEAN { 3 }
 sub DATA_TYPE_DATE { 4 }
 sub DATA_TYPE_BLOB { 5 }
-sub DATA_TYPE_STRUCT { 6 }
 sub DATA_TYPE_JSON { 6 }
 sub DATA_TYPE_PERL { 7 }
 
 # --------------------------------------------------------------------------
-# export macros into pages
+# export into pages
 # --------------------------------------------------------------------------
 
 sub import {
-   my $class = shift;
-   
-   #... check if there is something to do
-   return unless @_;
-   
-   #... export methods into caller (=page)
-   my %export = @_;
+   my ($class, %export) = @_;
+   return unless keys %export;
    my $caller = caller;
-   my $handler = $export{'handler'} || $export{'accessor'};
-   my @macros = $export{'macros'} ? @{$export{'macros'}} : ();
-   my @public = $export{'public'} ? @{$export{'public'}} : ();
-   assert($handler, "handler not defined for $caller");
+
    #... export handler
-   my @attrs = ('Handler');
-   if (grep { $handler eq $_ } @public) { push @attrs, 'Public' }
-   WebTek::Util::make_method($caller, $handler, undef, @attrs);
-   #... export macros
-   foreach my $macro (@macros) {
-      my ($column, $as) = ($macro, $macro);
-      my @attrs = ( 'Macro' );
-      if (grep { $column eq $_ } @public) { push @attrs, 'Public' }
-      #... check 'macro as other' syntax
-      if ($macro =~ /^(\w+) as (\w+)$/) { $column = $1; $as = $2 }
-      next if (defined &{"$caller\::$as"});
-      make_macro_method($caller, $handler, $column, $as, @attrs);
-   }
+   my @handler = $export{handler} =~ /(\w)(\s*:public)?/i;
+   __assert scalar(@handler), "handler not defined for $caller";
+   my @attrs = $handler[1] ? ('Handler', 'Public') : ('Handler');
+   WebTek::Util::may_make_method($caller, $handler, undef, @attrs);
 }
 
 # --------------------------------------------------------------------------
-# get information about the model
+# set custom properties
 # --------------------------------------------------------------------------
 
 sub PROTECTED { [] }
@@ -90,61 +71,10 @@ sub DATATYPES { {} }
 
 sub DEFAULTS { {} }
 
-# from unique constraint name to column
 sub UNIQUE_CONSTRAINTS { {} }
 
-sub primary_keys {
-   my $class = ref $_[0] || $_[0];
-
-   return $Primary_keys{app->name}->{$class} || [];
-}
-
-# returns list of hashes, each hash has keys 'name', 'default'
-sub columns { 
-   my $class = ref $_[0] || $_[0];
-
-   return $Columns{app->name}->{$class} || [];
-}
-
-sub foreign_keys {
-   my $class = ref $_[0] || $_[0];
-   
-   my @has_a = map {
-      [ $_, @{$Has_a{app->name}->{$class}->{$_}} ]
-   } keys %{$Has_a{app->name}->{$class}};
-   return \@has_a;
-}
-
-# --------------------------------------------------------------------------
-# set information about the model
-# --------------------------------------------------------------------------
-
-sub _real {
-   my $class = shift;
-   
-   $Real{app->name}->{$class} = shift if @_;
-   return $Real{app->name}->{$class};
-}
-
-sub _primary_keys {
-   my $class = shift;
-   my $keys = shift;    # array-ref with primary key names
-   
-   $Primary_keys{app->name}->{$class} = $keys;
-}
-
-sub _columns {
-   my $class = shift;
-   my $cols = shift;    # array-ref with column names
-   
-   $Columns{app->name}->{$class} = $cols;
-}
-
 sub has_a {
-   my $class = shift;
-   my $name = shift;
-   my $model = shift;         # optional
-   my $constructor = shift;   # optional
+   my ($class, $name, $model, $constructor) = @_;
 
    #... create column and accessor name
    my $column;
@@ -158,7 +88,7 @@ sub has_a {
    }
 
    #... find the model and constructor for the foreign-key
-   $model ||= $Has_a{app->name}->{$class}->{$column}->[1];
+   $model ||= $Has_a{$::appname}{$class}{$column}[2];
    unless ($model) {
       my $modelprefix = $class;
       $modelprefix =~ s/(\w+)$//;
@@ -168,91 +98,44 @@ sub has_a {
    }
    $constructor ||= 'new';
    
-   #... remember in $Has_a
-   $Has_a{app->name}->{$class}->{$column} =
-      [$accessor, $model, $constructor];
-   #... make a model method
+   #... extend class
+   $Has_a{$::appname}{$class}{$column} = [$accessor, $model, $constructor];
    $class->make_has_a_method($accessor, $column);   
 }
 
 # --------------------------------------------------------------------------
-# get database/cache object for this model
+# model information
 # --------------------------------------------------------------------------
 
-sub _db { DB }
-
-sub _cache { WebTek::Cache::cache() }
-
-# --------------------------------------------------------------------------
-# create and init model
-# --------------------------------------------------------------------------
-
-sub _new {
+sub _real {
    my $class = shift;
+   $class = ref $class || $class;
    
-   assert !ref($class), "try to create a model with an obj, not a classname";
-   my $self = $class->SUPER::new;
-   $self->_errors({});
-   $self->_updated([]);
-   return $self;
+   $Real{$::appname}{$class} = shift if @_;
+   return $Real{$::appname}{$class};
 }
 
-sub new {
+sub _primary_keys {
    my $class = shift;
-   my %content = ref $_[0] ? %{$_[0]} : @_;
-
-   #... create lazy instance
-   my $self = $class->_new;
-   #... set lazy
-   $self->_lazy([keys %content]);
-   #... update with params
-   $self->_update(\%content);
-
-   event->notify("$class-created", $self);
-   $self->class_created if $self->can("class_created");
-
-   return $self;
+   $class = ref $class || $class;
+   
+   $Primary_keys{$::appname}{$class} = shift if @_;
+   return $Primary_keys{$::appname}{$class};
 }
 
-sub new_default {
+sub _columns {
    my $class = shift;
-   my %content = ref $_[0] ? %{$_[0]} : @_;
+   $class = ref $class || $class;
    
-   #... fill in default values
-   foreach my $column (@{$class->columns}) {
-      my $n = $column->{'name'};
-      next if exists $content{$n};
-      if (exists $class->DEFAULTS->{$n}) {
-         if (ref($class->DEFAULTS->{$n}) eq 'CODE') {
-            $content{$n} = $class->DEFAULTS->{$n}->($class);
-         } else {
-            $content{$n} = $class->DEFAULTS->{$n};
-         }
-      } elsif ($n eq 'class') {
-         $content{$n} = $class;
-      } elsif (exists $column->{'default'}) {
-         $content{$n} = $column->{'default'}
-      }
-   }
-   #... create model
-   my $self = $class->new(%content);
-   return $self;
+   $Columns{$::appname}{$class} = shift if @_;
+   return $Columns{$::appname}{$class};
 }
 
-sub new_from_db {
+sub _foreign_keys {
    my $class = shift;
-   my $content = shift;    # hashref with contents
-   my $f_keys = shift;     # hashref with f_key objects
+   $f_keys = $Has_a{$::appname}{ref $class || $class};
    
-   $class = $content->{'class'} if $content->{'class'};
-   my $self = $class->_new;
-   $self->_lazy([]);
-   $self->_persistent_content({ %$content });
-   $self->_content_into_objs($content);
-   $self->_populate($content, $f_keys);
-   $self->_modified(0);
-   $self->_in_db(1);
-   return $self;
+   return [ map [ $_, @{$f_keys->{$_}} ], keys %$f_keys ];
 }
 
 sub _init {
@@ -299,36 +182,93 @@ sub _init {
       $modelclass = 'WebTek::Model::Oracle';
    }
    WebTek::Loader->load($modelclass);
-   assert($modelclass, "Modelclass not found for vendor: '$vendor'");
+   __assert $modelclass, "Modelclass not found for vendor: '$vendor'";
    #... replace the superclass with the vendor-specific one
-   for(my $i=0; $i<scalar(@{"$class\::ISA"}); $i++) {
-      if ("".${"$class\::ISA"}[$i] eq __PACKAGE__) {
+   for (my $i=0; $i<scalar(@{"$class\::ISA"}); $i++) {
+      if (''.${"$class\::ISA"}[$i] eq __PACKAGE__) {
          ${"$class\::ISA"}[$i] = $modelclass;
       }
    }
 
    #... create TABLE_NAME
-   my $tablename = substr $class, rindex($class, ":") + 1;
+   my $tablename = substr $class, rindex($class, ':') + 1;
    $tablename =~ s/([a-z])([A-Z])([a-z])/$1\_$2$3/g;
    $tablename = lc $tablename;
    WebTek::Util::may_make_method($class, 'TABLE_NAME', sub { $tablename });
+
    #... analyze table
    my $tablename = $class->TABLE_NAME;
    my $columns = $class->_db->column_info($tablename);
    my $primary_keys = $class->_db->primary_keys($tablename);
-   assert(scalar(@$primary_keys), "no primary keys defined for '$tablename'");
-   #... create model methods   
+   __assert scalar(@$primary_keys), "no primary keys defined for '$tablename'";
+
+   #... create model accessor methods
    foreach my $column (@$columns) {
-      #... create an accessor for each column
-      $class->make_columnname_method($column->{'name'});
-      #... check if column is a foreign key
-      if ($column->{'name'} =~ /^.+_id$/) {
-         $class->has_a($column->{'name'});
-      }
+      $class->_make_accessor($column->{name});
+      $class->has_a($column->{name}) if $column->{name} =~ /^.+_id$/;
    }
+   
    #... remember colums and primary keys
    $class->_columns($columns);
    $class->_primary_keys($primary_keys);
+}
+
+# --------------------------------------------------------------------------
+# get database/cache object for this model
+# --------------------------------------------------------------------------
+
+sub _db { WebTek::DB::DB() }
+
+sub _cache { WebTek::Cache::cache() }
+
+# --------------------------------------------------------------------------
+# create and init model
+# --------------------------------------------------------------------------
+
+sub new {
+   my ($class, %content) = @_;
+   
+   #... fill in default values
+   foreach my $column (@{$class->_columns}) {
+      my $n = $column->{name};
+      next if exists $content{$n};
+      if (exists $class->DEFAULTS->{$n}) {
+         if (ref($class->DEFAULTS->{$n}) eq 'CODE') {
+            $content{$n} = $class->DEFAULTS->{$n}->($class);
+         } else {
+            $content{$n} = $class->DEFAULTS->{$n};
+         }
+      } elsif ($n eq 'class') {
+         $content{$n} = $class;
+      } elsif (exists $column->{default}) {
+         $content{$n} = $column->{default}
+      }
+   }
+   
+   #... create model
+   my $self = $class->_new;
+   $self->_update(\%content);
+   return $self;
+}
+
+sub new_from_db {
+   my ($class, $content, $f_keys) = @_;
+   
+   $class = $content->{class} if $content->{class};
+   my $self = $class->_new;
+   $self->{_content} = $content;
+   $self->{_f_keys} = $f_keys;
+   $self->{_checked} = 1;
+   $self->{_in_db} = 1;
+   return $self;
+}
+
+sub _new {
+   return shift->SUPER::new({
+      _in_db => 0, _checked => 0,
+      _updated => [], _errors => {},
+      _content => {}, _f_keys => {}, _modified => {}, _accessors => {},      
+   });
 }
 
 # --------------------------------------------------------------------------
@@ -336,49 +276,37 @@ sub _init {
 # --------------------------------------------------------------------------
 
 sub find_one {
-   my $class = shift;
-   my %params = ref $_[0] ? %{$_[0]} : @_;
+   my ($class, %params) = @_;
 
-   my $obj = $class->get_from_cache(%params);
+   my $obj = $class->_get_from_cache(%params);
    unless ($obj) {
       $obj = $class->find(%params)->[0];
-      $obj->set_to_cache if $obj;
+      $obj->_set_to_cache if $obj;
    }
    return $obj;
 }
 
-sub find_one_or_die {
-   my $class = shift;
-   my %params = ref $_[0] ? %{$_[0]} : @_;
-
-   my $result = $class->find_one(%params);
-   assert $result, "Row not found in database: table '".$class->TABLE_NAME().
-      "': ".join(", ", map { "'$_' => '".$params{$_}."'" } keys(%params));
-   return $result;
-}
-
 sub find {
-   my $class = shift;
-   my %params = ref $_[0] ? %{$_[0]} : @_;
+   my ($class, %params) = @_;
 
    #... fetch from db
    my $f_keys = $class->_prepare_params(\%params);
    my $table = $class->TABLE_NAME;
-   my $order = $params{'order'} ? "order by $params{'order'}" : '';
-   my $combine = $params{'combine'} || 'and';
-   my $limit = $params{'limit'} ? "limit $params{'limit'}" : '';
-   my $offset = $params{'offset'} ? "offset $params{'offset'}" : '';
-   my $fetch = $params{'FETCH'} || "*";
-   delete $params{'FETCH'};
-   delete $params{'limit'};
-   delete $params{'offset'};
-   delete $params{'order'};
-   delete $params{'combine'};
+   my $order = $params{order} ? "order by $params{order}" : '';
+   my $combine = $params{combine} || 'and';
+   my $limit = $params{limit} ? "limit $params{limit}" : '';
+   my $offset = $params{offset} ? "offset $params{offset}" : '';
+   my $fetch = $params{fetch} || "*";
+   my $where = $params{where} ? "where $params{where}" : '';
+   my $args = $params{args} || []; 
+   $order = '' if $fetch = 'count(*)';
+   delete @params{qw( fetch limit offset order combine where args )};
    # single table inheritance
    $params{'class'} ||= $class->_class if $class->can('_class');
    # parse conditions
-   my @conditions = ();
+   my (@where, @conditions);
    foreach my $key (keys %params) {
+      __assert !$where, "try to set conditons, but where clause exists already";
       if ($key =~ /^((and|or)\s+)?(\S+)(\s+(\S+))?$/) {
          my $com = $2 || $combine;
          my $col = $3;
@@ -388,222 +316,162 @@ sub find {
          log_warning $class . "->find: cannot understand condition '$key'";
       }
    }
-   # order conditions (and before or)
-   @conditions = sort { $a->[1] <=> $b->[1] } @conditions;
-   # create where clause
-   my @args = ();
-   my @where = ();
-   foreach (@conditions) {
+   # order conditions (and before or) and create where clause
+   foreach (sort { $a->[1] <=> $b->[1] } @conditions) {
       my ($key, $com, $col, $match) = @$_;
       if (ref $params{$key} eq 'ARRAY') {
-         my $in = join " or ", map { "`$col` $match ?" } @{$params{$key}};
-         push @args, @{$params{$key}};
+         my $in = join ' or ', map { "`$col` $match ?" } @{$params{$key}};
+         push @$args, @{$params{$key}};
          push @where, (@where ? "$com ( $in )" : "( $in )");
       } else {
-         push @args, $params{$key};
+         push @$args, $params{$key};
          push @where, (@where ? "$com `$col` $match ?" : "`$col` $match ?");
       }
    }
-   my $where = @where ? "where " . join(" ", @where) : "";
-   # create sql and fetch result
+   $where ||= @where ? 'where ' . join(' ', @where) : '';
+   # create sql, fetch and return result
    my $sql = qq{ select $fetch from $table $where $order $limit $offset };
-   my $rows = $class->_db->do_query($sql, @args);
-   #... check if only the count was requested
-   return $rows->[0]->{'c'} if $fetch eq 'count(*) as c';
-   #... create objects
-   my $objs = $class->_objs_for_rows($rows, $f_keys);
-   return $objs;      
-}
-
-sub _count {
-   my $class = shift;
-   my %params = ref $_[0] ? %{$_[0]} : @_;
-
-   $params{'FETCH'} = 'count(*) as c';
-   delete $params{'order'};
-   return $class->find(%params);
-}
-
-sub count { &_count }
-
-sub where {
-   my $class = shift;
-   my $where = shift;   # where and order sql part
-   my @args = @_;
-   
-   #... fetch from db
-   my $table = $class->TABLE_NAME;
-   my $sql = qq{ select * from $table where $where };
-   
-   #... create objects
-   my $objs =  $class->_objs_for_rows($class->_db->do_query($sql, @args));
-   return $objs;
-}
-
-sub count_where {
-   my $class = shift;
-   my $where = shift;   # where and order sql part
-   my @args = @_;
-
-   my $table = $class->TABLE_NAME;
-   my $sql = qq{ select count(*) as count from $table where $where };
-   return $class->_db->do_query($sql, @args)->[0]->{'count'};
-}
-
-sub _objs_for_rows {
-   my $class = shift;
-   my $rows = shift;
-   my $f_keys = shift;  # optional f_keys objs for the model
-
-   my $objs = [];
-   foreach my $row (@$rows) {
-      push @$objs, $class->new_from_db($row, $f_keys);
-   }
-   return $objs;  
+   my $rows = $class->_db->do_query($sql, @$args);
+   return $fetch eq 'count(*)'
+      ? $rows->[0]->{'count(*)'}
+      : [ map $class->new_from_db($_, $f_keys), @$rows ];
 }
 
 # --------------------------------------------------------------------------
 # change object state
 # --------------------------------------------------------------------------
 
-#... updates model with all values in the params hash
-sub _update {
-   my $self = shift;
-   my $params = shift;
-   
-   $self->_content_into_objs($params);
-   #... update content
-   foreach my $column (@{$self->columns}) {
-      my $name = $column->{'name'};
-      $self->$name($params->{$name}) if exists $params->{$name};
-   }
-   #... update f_keys
-   foreach my $f_key (@{$self->foreign_keys}) {
-      my ($column, $accessor, $model, $constructor) = @$f_key;
-      $self->$accessor($params->{$accessor}) if exists $params->{$accessor};
-   }
-}
-
 #... updates model with all NOT PROTECTED values in the params hash
 sub update {
-   my $self = shift;
-   my $params = ref $_[0] ? $_[0] : { @_ };
+   my ($self, %params) = @_;
+   my $class = ref $self;
    
    #... delete protected params
    foreach my $protected (@{$self->PROTECTED}) {
-      my $foreign_key_accessor = "";
-      foreach my $f_key (@{$self->foreign_keys}) {
-         if ($f_key->[0] eq $protected) {
-            $foreign_key_accessor = $f_key->[1];
-            last;
-         }
-      }
-      if ($foreign_key_accessor) { delete $params->{$foreign_key_accessor} }
-      delete $params->{$protected};
+      delete $params{$protected};
+      delete $params{$Has_a{$::appname}{$class}{$protected}[0]}
+         if exists $Has_a{$::appname}{$class}{$protected};
    }
+   
    #... update model
-   $self->_update($params);
+   $self->_update(\%params);
 }
 
-#... fetch an lazy object from the db FIXME!
+#... updates model with all values in the params hash
+sub _update {
+   my ($self, $params) = @_;
+   my %modified;
+
+   #... update foreign keys
+   foreach my $f_key (@{$self->foreign_keys}) {
+      my ($column, $accessor, $model, $constructor) = @$f_key;
+      if (exists $params->{$column}) {
+         my $id = $params->{$column};
+         $modified{$column} = $id;
+         $modified{$accessor} = $id && $model->$constructor(id => $id);
+         delete $params->{$column};
+         delete $params->{$accessor};
+      } elsif (exists $params->{$accessor}) {
+         my $obj = $params->{$column};
+         $modified{$column} = $obj && $obj->id;
+         $modified{$accessor} = $obj;
+         delete $params->{$column};
+         delete $params->{$accessor};
+      }
+   }
+   
+   #... update normal content
+   foreach my $name (map $_->{name}, @{$self->columns}) {
+      $modified{$name} = $params->{$name} if exists $params->{$name};
+   }
+   
+   #... update obj state
+   delete $self->{_accessors}{$_} foreach keys %modified;
+   $self->{_modified} = { %{$self->_modified}, %modified };
+}
+
 sub _fetch {
    my $self = shift;
    my $class = ref $self;
 
-   #... prepare params
-   my %params = map { $_ => $self->$_() } @{$self->_lazy};
-
-   #... check if all primay keys are defined
-   foreach (@{$self->primary_keys}) {
-      WebTek::Exception->throw("$self->_fetch: primary-key '$_' don't exists!")
-         unless exists $params{$_};
-   }
+   #... get primary keys
+   my %params = map {
+      WebTek::Exception->throw("$class->_fetch: primary-key '$_' don't exist!")
+         unless exists $self->{_content}{$_};      
+      $_ => $self->{_content}{$_};
+   } @{$self->_primary_keys};
    
    #... get obj
    my $obj = $class->find_one(%params) or WebTek::Exception->
       throw("$self->_fetch: cannot find db-entry for " . struct(\%params));
-
+   
    #... copy obj to self
-   $self->{$_} = $obj->{$_} foreach (keys %$obj);
+   my ($from, $to) = ($obj->{_content}, $self->{_content});
+   $to{$_} = $from{$_} foreach (keys %$from);
+
+   #... update obj state
+   $self->{_in_db} = 1;
+   $self->{_accessors} = {};
 }
 
 # --------------------------------------------------------------------------
 # some utilities
 # --------------------------------------------------------------------------
 
-#... converts all SCALAR params to the coresponding WebTek::Data:: objects.
-sub _content_into_objs {
-   my $class_or_self = shift;
-   my $content = shift;          # hashref with contents
+#... create an accessor to access db-columns via a method
+sub _make_accessor {
+   my ($class, $method) = @_;
    
-   foreach my $column (@{$class_or_self->columns}) {
-      my $name = $column->{'name'};
-      my $data_type = $column->{'webtek-data-type'};
-      #... check if there is something to do
-      next unless $content->{$name};
-      next if ref($content->{$name}) =~ /^WebTek::Data::/;
-      #... create content object
-      my $value = $content->{$name};
-      if ($data_type == DATA_TYPE_BOOLEAN) {
-         $content->{$name} = $value ? 1 : 0;         
-      } elsif ($data_type == DATA_TYPE_JSON) {
-         $content->{$name} = struct($value);
-      } elsif ($data_type == DATA_TYPE_PERL) {
-         $content->{$name} = struct($value, 'perl');
-      } elsif ($data_type == DATA_TYPE_NUMBER) {
-         $content->{$name} = $value;
-      } elsif ($data_type == DATA_TYPE_DATE) {
-         my $timezone = $class_or_self->_db->config->{'timezone'};
-         $content->{$name} = date($value, $timezone);
-      } elsif ($data_type == DATA_TYPE_STRING) {
-         $content->{$name} = $value;
-      }
-   }
+   my $sub = sub {
+      my $self = shift;
+
+      $self->_update({ $method => shift }) if @_;
+      my $a = $self->{_accessors}{$method} ||= $self->_accessor($method);
+      return $a->{$method};
+   };
+   
+   my @attrs = (grep $_ eq $method, @{$class->PROTECTED}) ? () : ('Macro');
+   WebTek::Util::make_method($class, $method, $sub, @attrs);
 }
 
-#... this function creates all f_key objects for this model
-#... i.e. creates an User object for the content 'user_id'
-sub _populate {
-   my $self = shift;
-   my $content = shift;       # hashref with content objects (WebTek::Data::X)
-   my $f_keys = shift || {};  # optional hashref with f_key objects
+#... serialize from strings to WebTek::Data objects
+sub _serialize {
+   my ($self, $value, $type) = @_;
+   
+   return $value if blessed $value;
+   return $value unless $value or $type eq DATA_TYPE_STRING;
+   return ($value ? 1 : 0) if $type eq DATA_TYPE_BOOLEAN;
+   return ($value ? 0+$value : $value) if $type eq DATA_TYPE_NUMBER;
+   return struct($value) if $type eq DATA_TYPE_JSON;
+   return struct($value, 'perl') if $type eq DATA_TYPE_PERL;
+   my $timezone = $self->_db->config->{timezone}
+   return _date($value, $timezone) if $type eq DATA_TYPE_DATE;
+   throw "cannot access '$name', unknown data-type '$type'";
+}
 
-   #... set content
-   $self->{'content'} = $content;
-   #... handle f_keys
-   foreach my $f_key (@{$self->foreign_keys}) {
-      my ($column, $accessor, $model, $constructor) = @$f_key;
-      #... f_key is already there FIXME! is this save?
-      next if (ref $self->{'has_a'}->{$accessor});
-      #... f_key comes from the user of this model
-      if (exists $f_keys->{$accessor}) {
-         $self->{'has_a'}->{$accessor} = $f_keys->{$accessor};
-      #... create lazy f_key object
-      } elsif (defined $self->{'content'}->{$column}) {
-         $self->{'has_a'}->{$accessor} = 
-            $model->$constructor('id' => $self->{'content'}->{$column});
-      } else {
-         $self->{'has_a'}->{$accessor} = undef;
-      }
-   }
+sub _accessor {
+   my ($self, $name) = @_;
+ 
+   my $type = $self->_columns->{$name}{'webtek_data_type'};
+   my $is_modified = exists $self->{_modified}{$name};
+   my $store = $is_modified ? $self->{_modified} : $self->{_content};
+   $store->{$name} = _serialize($store->{$name}, $type);
+   return $store;
 }
 
 #... this function prepare a param hash, to be used by an find function
-#...   WebTek::Data:: objects -> SCALAR
-#...   has_a params -> SCALAR (i.e. the object under user -> SCALAR user_id)
-#... - this function takes a hashref an convert all values
-#... - and it returns a hashref with all foreign-key objects
 sub _prepare_params {
-   my $class_or_self = shift;
-   my $params = shift;     # hashref
+   my ($class, $params) = @_;
    
    my $f_keys = {};
-   while (my ($key, $value) = each(%$params)) {
+   while (my ($key, $value) = each %$params) {
       #... translate objects to db-columns
       if (my $ref = ref $value) {
-         if ($ref =~ /^WebTek::Data::/) {
+         next if $ref eq 'ARRAY'; # type ARRAY understands the find fkt
+         next unless blessed $ref;
+         if ($value->can('to_db')) {
             $params->{$key} = $value->to_db($class_or_self->_db);
-         } elsif ($ref ne 'ARRAY') { # the ARRAY understands the find fkt
+         } elsif ($value->can('id')) {
             $f_keys->{$key} = $value;
             $params->{"$key\_id"} = $value->id;
             delete $params->{$key};
@@ -613,18 +481,23 @@ sub _prepare_params {
    return $f_keys;
 }
 
-#... this function returns SCALAR values for all the WebTek::Data:: objects
-sub _values_for_columns {
-   my $self = shift;
-   my $columns = shift;
-   my $content = shift || $self->{'content'};
-
-   return map {
-      (ref $content->{$_})
-         ? $content->{$_}->to_db($self->_db)
-         : $content->{$_}
-   } @$columns;
+#... this function returns SCALAR values for WebTek::Data:: objects
+sub _value_for_column {
+   my ($self, $c, $s2) = @_;
+   my ($s1, $s2) = ($self->{_content}, $s2 || {});
+   
+   my $v = exists $s2->{$c} ? $s2->{$c} : $s1->{$c};
+   $v = $v->to_db($self->_db) if blessed $v and $v->can('to_db');
+   return $v;
 }
+
+sub _values_for_columns {
+   my ($self, $columns, $store) = @_;
+   
+   return map $self->_value_for_column($_, $store), @$columns;
+}
+
+sub _do_action { shift->_db->do_action(@_) }
 
 sub _get_next_id { } # implement this in the subclass
 
@@ -632,142 +505,96 @@ sub _get_next_id { } # implement this in the subclass
 # make persistent with db
 # --------------------------------------------------------------------------
 
-# like "$self->_db->do_action" but subclasses can override to throw meaningful exceptions
-sub _do_do_action {
-   my ($self, $sql, @args) = @_;
-   $self->_db->do_action($sql, @args);
-}
-
-sub throw_model_invalid_if_errors {
-   my $self = shift;
-   
-   unless ($self->is_valid) {
-      my @errors = keys %{$self->_errors};
-      WebTek::Exception::ModelInvalid->
-         throw("model $self invalid for @errors", $self);
-   }
-}
-
-# like "$self->_db->do_action" but converts constraint errors into $self->{errors}
-sub _do_action {
-   my ($self, $sql, @args) = @_;
-   
-   my $chk = eval { $self->_do_do_action($sql, @args); 1; };
-   unless (defined($chk)) {
-      my $err = $@;
-      if (ref($err) eq "WebTek::DB::UniqueConstraintViolatedException") {
-         my $column = $self->UNIQUE_CONSTRAINTS()->{$err->constraint_name()};
-         if ($column) {
-            $self->_set_errors({ $column => 'alreadyexists' });
-            $self->throw_model_invalid_if_errors();
-         }
-      }
-      die($err);
-   }
-}
-
 sub save {
    my $self = shift;
    my $class = ref $self;
    
-   event->notify("$class-before-save", $self);
-   $self->before_save if $self->can("before_save");
+   _event->trigger(obj => $class, name => 'before-save', args => [ $self ]);
+   $self->before_save if $self->can('before_save');
 
    #... check if object is already persistent
-   return if $self->_in_db and not $self->_modified;
+   return if $self->_in_db and not keys %{$self->_modified};
 
    #... check if content is valid
-   $self->throw_model_invalid_if_errors();
+   $self->is_valid('die');
    
-   $self->delete_from_cache;
+   $self->_delete_from_cache;
+   my $modified = self->{_modified};
    my $table_name = $self->TABLE_NAME;
-   my $operation = $self->_in_db ? 'update' : 'insert';
-   event->notify("$class-before-$operation", $self);
+   my $op = $self->_in_db ? 'update' : 'insert';
+   _event->trigger(obj => $class, name => "before-$op", args => [$self]);
 
    #... do an update
-   if ($operation eq 'update') {
-      $self->before_update if $self->can("before_update");
-      my @pks = @{$self->primary_keys};
-      my $where = join " and ", map { "`$_` = ?" } @pks;
-      my @where_values =
-         $self->_values_for_columns(\@pks, $self->_persistent_content);
-      my @set_columns = @{$self->_lazy};
-      my @set_values = $self->_values_for_columns(\@set_columns);
-      my $set = join ", ", map { "`$_` = ?" } @set_columns;
-      my $sql = qq{ update $table_name set $set where $where };
+   if ($op eq 'update') {
+      $self->before_update if $self->can('before_update');
+      my @pks = @{$self->_primary_keys};
+      my $where = join ' and ', map "`$_` = ?", @pks;
+      my @where_values = $self->_values_for_columns(\@pks);
+      my @set_columns = keys @{$self->_modified};
+      my @set_values = $self->_values_for_columns(\@set_columns, $modified);
+      my $set = join ', ', map "`$_` = ?", @set_columns;
+      my $sql = "update $table_name set $set where $where";
       $self->_do_action($sql, @set_values, @where_values);
       $self->_updated(\@set_columns);
 
    #... do an insert
    } else {
-      $self->before_insert if $self->can("before_insert");
-      unless ($self->{'content'}->{'id'}) {
-         $self->{'content'}->{'id'} = $self->_get_next_id;
-      }
-      my @columns = map { $_->{'name'} } @{$self->columns};
-      my $keys = join(", ", map { "`$_`" } @columns);
-      my $values = join(", ", map { '?' } @columns);
-      my $sql = qq{ insert into $table_name ($keys) values ($values) };
-      my @args = $self->_values_for_columns(\@columns);
+      $self->before_insert if $self->can('before_insert');
+      $self->{_content}{id} = $self->_get_next_id unless $self->{_content}{id};
+      my @columns = map $_->{name}, @{$self->_columns};
+      my $keys = join ', ', map "`$_`", @columns;
+      my $values = join ', ', map '?', @columns;
+      my $sql = "insert into $table_name ($keys) values ($values)";
+      my @args = $self->_values_for_columns(\@columns, $modified);
       $self->_do_action($sql, @args);
-      if ($self->can('id') and not defined $self->{'content'}->{'id'}) {
-         $self->id($self->_db->last_insert_id($table_name, 'id'));
+      if ($self->can('id') and not defined $self->{_content}{id}) {
+         $self->{_content}{_id} = $self->_db->last_insert_id($table_name, 'id');
       }
       $self->_updated(\@columns);
    }
 
-   $self->_persistent_content({ %{$self->{'content'}} });
-   $self->_modified(0);
+   $self->{_content}{$_} = $modified->{$_} foreach (keys %$modified);
+   $self->{_modified} = {};
    $self->_in_db(1);
-   $self->_lazy([]);
-   event->notify("$class-after-$operation", $self);
-   my $callback = "after_$operation";
+   _event->trigger(obj => $class, name => "after-$op", args => [$self]);
+   my $callback = "after_$op";
    $self->$callback if $self->can($callback);
-   $self->set_to_cache;
+   $self->_set_to_cache;
 
-   event->notify("$class-after-save", $self);
-   $self->after_save if $self->can("after_save");
+   _event->trigger(obj => $class name=> 'after-save', args => [ $self ]);
+   $self->after_save if $self->can('after_save');
 }
 
 # --------------------------------------------------------------------------
 # cache methods
 # --------------------------------------------------------------------------
 
-sub delete_from_cache {
+sub _delete_from_cache {
    my $self = shift;
-   my $class = ref $self;
-   my $real = $class->_real;
+   my $real = $self->_real;
 
    if (my $keys = WebTek::Cache::settings($real)) {
       foreach my $key (@$keys) {
          my @columns = split ",", $key;
-         #... remove old content (state before update) from cache
-         if (my $content = $self->_persistent_content) {
-            my @values = $self->_values_for_columns(\@columns, $content);
-            my $key = WebTek::Cache::key($real, @columns, @values);
-            $self->_cache->delete($key);
-            log_debug "$$: WebTek::Model: delete_from_cache - old: $key";
-         }
-         #... remove new content (state after update) from cache
          my @values = $self->_values_for_columns(\@columns);
          my $key = WebTek::Cache::key($real, @columns, @values);
          $self->_cache->delete($key);
-         log_debug "$$: WebTek::Model: delete_from_cache - new: $key";
+         log_debug "$$: WebTek::Model: delete_from_cache: $key";
       }
    }
 }
 
-sub set_to_cache {
+sub _set_to_cache {
    my $self = shift;
    my $class = ref $self;
-   my $real = $class->_real;
+   my $real = $self->_real;
 
    #... set obj for each cache key
    if (my $keys = WebTek::Cache::settings($real)) {
       #... create a copy of $self with all foreign-keys setted to lazy refs
-      my $obj = $class->new_from_db($self->{'content'});
+      my $obj = $class->new_from_db($self->{_content});
       foreach my $key (@$keys) {
-         my @columns = split ",", $key;
+         my @columns = split ',', $key;
          my @values = $self->_values_for_columns(\@columns);
          my $key = WebTek::Cache::key($real, @columns, @values);
          $self->_cache->set($key, $obj);
@@ -782,10 +609,10 @@ sub cache_key {
    
    my $keys = WebTek::Cache::settings($real);
    return unless $keys;
-   my $key1 = join ",", sort(keys %params);
+   my $key1 = join ',', sort(keys %params);
    foreach my $key (@$keys) {
-      my @columns = sort(split ",", $key);
-      my $key2 = join ",", @columns;
+      my @columns = sort split ',', $key;
+      my $key2 = join ',', @columns;
       if ($key1 eq $key2) {
          $class->_prepare_params(\%params);
          my @values = map $params{$_}, @columns;         
@@ -794,15 +621,13 @@ sub cache_key {
    }
 }
 
-sub get_from_cache {
+sub _get_from_cache {
    my ($class, %params) = @_;
    
-   my ($cache_key, @columns) = $class->cache_key(%params);
+   my ($cache_key, @columns) = $class->_cache_key(%params);
    return unless $cache_key;
-   my $obj = $class->_cache->get($cache_key);
-   return unless $obj;
-   #... populate object with search setting (they may be objects)
-   $obj->$_($params{$_}) foreach (@columns);
+   my $obj = $class->_cache->get($cache_key) or return;
+   $obj->_update({ map { $_ => $params{$_} } @columns });
    log_debug "$$: WebTek::Model: get_from_cache: $cache_key: $obj";
    return $obj;
 }
@@ -815,21 +640,20 @@ sub delete {
    my $self = shift;
    my $class = ref $self;
 
-   event->notify("$class-before-delete", $self);
-   $self->before_delete if $self->can("before_delete");
+   _event->trigger(obj => $class, name => 'before-delete', args => [ $self ]);
+   $self->before_delete if $self->can('before_delete');
 
    #... delete from cache
-   $self->delete_from_cache;
+   $self->_delete_from_cache;
 
    #... delete from db
    my $table_name = $self->TABLE_NAME;
-   my $where = join(" and ", map { "$_ = ?" } @{$self->primary_keys});
-   my @args = map { $self->{'content'}->{$_} } @{$self->primary_keys};
-   my $sql = qq{ delete from $table_name where $where };
-   $self->_db->do_action($sql, @args);
+   my $where = join(' and ', map "$_ = ?", @{$self->_primary_keys});
+   my $sql = "delete from $table_name where $where";
+   $self->_do_action($sql, $self->_values_for_columns($self->_primary_keys));
 
-   event->notify("$class-after-delete", $self);
-   $self->after_delete if $self->can("after_delete");
+   _event->trigger(obj => $class, name => "after-delete", args => [ $self ]);
+   $self->after_delete if $self->can('after_delete');
 }
 
 # --------------------------------------------------------------------------
@@ -837,69 +661,39 @@ sub delete {
 # --------------------------------------------------------------------------
 
 sub is_valid {
-   my $self = shift;
+   my ($self, $die) = @_;
    
    $self->_check;
-   return scalar(keys %{$self->_errors}) ? 0 : 1;
+   my @errors = keys %{$self->{_errors}};
+   unless ($die) { return scalar(@errors) ? 0 : 1 }
+   @errors and WebTek::Exception::ModelInvalid->
+      throw("model $self invalid for @errors", $self);
 }
 
-# returns e.g. "Model.Xyz.col.alreadyexists"
-sub error_on { (shift->error_key_for(shift)) }
-
-# returns e.g. "alreadyexists"
-sub error_suffix_on {
-   my $self = shift;
-   my $column = shift;  # columnname
-   
-   my $error = $self->error_on($column); # e.g. "Model.Xyz.col.alreadyexists"
-   if ($error =~ /^Model.(\w+).(\w+).(\w+)$/) {
-      my ($cl, $col, $err) = ($1, $2, $3);
-      assert ref($self) =~ /\Q$cl/;
-      assert $col eq $column;
-      return $err;
-   } else {
-      return undef;
-   }
-}
-
-sub error_key_for {
-   my $self = shift;
-   my $column = shift;  # columnname
+sub error_on {
+   my ($self, $column) = @_;
    
    $self->_check;
-   return $self->_errors->{$column};
-}
-
-sub error_keys {
-   my $self = shift;
-   
-   $self->_check;
-   #... create keys
-   my $keys = [];
-   while (my ($column, $key) = each(%{$self->_errors})) {
-      push @$keys, "$column.$key";
-   }
-   return $keys;
+   return $self->{_errors}{$column};
 }
 
 sub _set_errors {
-   my $self = shift;
-   my $errors = shift;          # column-name to e.g. "empty"
+   my ($self, $errors) = @_;
    
    my $prefix = ref $self;
    $prefix =~ s/.*?:://;
    $prefix =~ s/::/\./g;
-   foreach (keys %$errors) { $errors->{$_} = "$prefix.$_.$errors->{$_}" }
+   $errors->{$_} = "$prefix.$_.$errors->{$_}" foreach (keys %$errors);
    
-   $self->_checked(1);
-   $self->_errors($errors);
+   $self->{_checked} = 1;
+   $self->{_errors} = $errors;
 }
 
 sub _check {
    my $self = shift;
    my $class = ref $self;
    
-   event->notify("$class-before-check", $self);
+   _event->trigger(obj => $class, method => 'before-check', args => [ $self ]);
    $self->before_check if $self->can("before_check");
    
    #... is content already checked?
@@ -907,44 +701,43 @@ sub _check {
 
    #... check each column
    my $errors = {};
-   CHECK: foreach my $column (@{$self->columns}) {
-      my $name = $column->{'name'};
-      my $content = $self->{'content'}->{$name};
-      my $value = ref $content ? $content->to_db($self->_db) : $content;
+   my $modified = $self->{_modified};
+   CHECK: foreach my $name (keys %$modified) {
+      my $column = $self->_columns->{$name};
+      my $value = $self->_value_for_column($name, $modified);
 
       #... dont check the id-field when model is not in db
-      next CHECK if $name eq 'id' and !$self->_in_db;
+      next CHECK if $name eq 'id' and not $self->_in_db;
 
       #... is there a property check defined 
       my $prop = $self->PROPERTIES->{$name};
       if ($prop) {
          next CHECK if ref $prop eq "CODE" and &$prop($self, $name, $value);
          next CHECK if $value =~ /$prop/;
-         unless ($value) { $errors->{$name} = "empty" }
-         else { $errors->{$name} = "invalid" }
+         unless ($value) { $errors->{$name} = 'empty' }
+         else { $errors->{$name} = 'invalid' }
          next CHECK;
       }
 
       #... check for nullable
-      next CHECK if $column->{'nullable'} and ($value eq "");
-      if (!$column->{'nullable'} and ($value eq "")) {
-         $errors->{$name} = "empty";
+      next CHECK if $column->{nullable} and ($value eq '');
+      if (!$column->{nullable} and ($value eq '')) {
+         $errors->{$name} = 'empty';
          next CHECK;
       }
 
       #... check for valid dates
-      if ($column->{'webtek-data-type'} == DATA_TYPE_DATE) {
-         my $date = ref $content ? $content : date($content);
-         unless ($date->is_valid) { $errors->{$name} = "invalid" }
+      if ($column->{webtek_data_type} eq DATA_TYPE_DATE) {
+         $errors->{$name} = 'invalid' unless _date($value)->is_valid;
          next CHECK;
       }
 
-      #... check length for strings
+      #... check length
       {
          use bytes;
-         next CHECK unless defined $column->{'length'};
-         next CHECK unless $column->{'webtek-data-type'} == DATA_TYPE_STRING;
-         next CHECK if $column->{'length'} >= length($value);       
+         next CHECK unless defined $column->{length};
+         next CHECK if $column->{webtek_data_type} eq DATA_TYPE_DATE;
+         next CHECK if $column->{length} >= length($value);       
       }
 
       #... ok, all test failed, push column to errors
@@ -954,69 +747,8 @@ sub _check {
    #... add model-name to the keys
    $self->_set_errors($errors);
 
-   event->notify("$class-after-check", $self);
+   _event->trigger(obj => $class, method => 'after-check', args => [ $self ]);
    $self->after_check if $self->can('after_check');
-}
-
-# --------------------------------------------------------------------------
-# make methods
-# --------------------------------------------------------------------------
-
-sub make_columnname_method {
-   my $class = shift;
-   my $method = shift;
-   
-   my @attrs = (grep { $_ eq $method } @{$class->PROTECTED}) ? () : ('Macro');
-   my $sub = sub {
-      my $self = shift;
-
-      if (@_) {
-         my $value = shift;
-         $self->_modified(1);
-         $self->_checked(0);
-         $self->_content_into_objs({ $method => $value });
-         $self->{'content'}->{$method} = $value;
-         unless (grep { $_ eq $method } @{$self->_lazy}) {
-             push @{$self->_lazy}, $method;
-         }
-      } elsif (not exists $self->{'content'}->{$method}) {
-         $self->_fetch;
-      }
-      return $self->{'content'}->{$method};
-   };
-   WebTek::Util::make_method($class, $method, $sub, @attrs);
-}
-
-sub make_has_a_method {
-   my ($class, $method, $column) = @_;
-   
-   my @attrs = (grep { $_ eq $method } @{$class->PROTECTED}) ? () : ('Handler');
-   my $sub = sub {
-      my $self = shift;
-      
-      if (@_) {
-         my $obj = shift;
-         $self->_modified(1);
-         $self->_checked(0);
-         $self->{'has_a'}->{$method} = $obj ? $obj : undef;
-         $self->{'content'}->{$column} = $obj ? $obj->id : undef;            
-         unless (grep { $_ eq $method } @{$self->_lazy}) {
-             push @{$self->_lazy}, $column;
-         }
-      } elsif (not exists $self->{'has_a'}->{$method}) {
-         $self->_fetch;
-      }
-      return $self->{'has_a'}->{$method};
-   };
-   WebTek::Util::make_method($class, $method, $sub, @attrs);
-}
-
-sub make_macro_method {
-   my ($class, $accessor, $column, $macro, @attrs) = @_;
-
-   #... make method
-   my $sub = sub { shift->$accessor()->$column() };
-   WebTek::Util::make_method($class, $macro, $sub, @attrs);
 }
 
 # --------------------------------------------------------------------------
@@ -1027,16 +759,11 @@ sub to_hash {
    my $self = shift;
    
    my $hash = {};
-   foreach my $c (@{$self->columns}) {
-      my $name = $c->{'name'};
+   foreach my $name (map $_->{name}, @{$self->columns}) {
       next if grep { $name eq $_ } @{$self->PROTECTED};
-      my $content = $self->{'content'}->{$name};
-      $hash->{$name} = encode_utf8(
-         ref($content) =~ /^WebTek::Data/
-            ? $content->to_db($self->_db)
-            : $content || ''
-      );
-      _utf8_on($hash->{$name});
+      my $value = $self->_value_for_column($name, $self->{_modified});
+      $hash->{$name} = Encode::encode_utf8($value);
+      Encode::_utf8_on($hash->{$name});
    }
    return $hash;
 }
@@ -1044,90 +771,22 @@ sub to_hash {
 sub to_string {
    my $self = shift;
    
-   return "$self: " . join(", ", map {
-      "$_->{'name'}: " . $self->{'content'}->{$_->{'name'}};
-   } @{$self->columns});
+   my $hash = $self->to_hash;
+   my $table_name = $self->table_name;
+   my $values = join "\n", map "   $_: $hash->{$_}", keys %$hash;   
+   return "$table_name:\n$values";
 }
 
 sub describe {
-   my $class_or_self = shift;
+   my $class = shift;
    
-   my $desc =
-      "describe " . $class_or_self->TABLE_NAME . ":\n" .
-      "primary-key: " . join(", ", @{$class_or_self->primary_keys}) . "\n";
-   foreach my $column (@{$class_or_self->columns}) {
-      $desc .= join(",", map { "$_: $column->{$_}" } keys %$column) . "\n";
+   my $table_name = $class->TABLE_NAME;
+   my $primary_keys = join ", ", @{$class->_primary_keys};
+   my $desc = "describe $table_name:\n  primary-key: $primary_keys\n";
+   foreach my $column (@{$class->columns}) {
+      $desc .= join "\n", map "   $_: $column->{$_}", keys %$column;
    }
    return $desc;
 }
 
 1;
-
-=head1 NOTES
-
-=head2 Mandatory fields
-
-A field which is marked as "not null" in the database is interpreted as
-mandatory by WekTek. This means that firstly, the value must be "defined" (as
-defined by the "defined" function) and secondly the value must not be empty.
-This follows the semantics generally intended when setting a field to be not
-null in a database. This also follows the implementation of Oracle, which
-treats nulls and the empty strings both as nulls, but not MySQL.
-
-=head2 Using different table names to class names
-
-By default WebTek assumes that the class name is the same as the table name. If
-the class is called MyApp::Model::Xyz then the table "xyz" in the database is
-used.
-
-This can be altered (for example to enable the class MyApp::Model::SalesPerson
-to use the table "sales_person", i.e. with an extra underscore) by:
-
-=over 4
-
-=item 1.
-
-Defining a TABLE_NAME function in your subclass such as:
-
-   sub TABLE_NAME { "sales_person" }
-
-=item 2.
-
-Any classes which have a relationship to your class (e.g. if a class
-MyApp::Model::Profile has a database field "sales_person_id" which should, in
-the object model, reference a MyApp::Model::SalesPerson), then you need the
-following in your subclass:
-
-   __PACKAGE__->has_a('sales_person_id', 'MyApp::Model::SalesPerson');
-
-=back
-
-=head2 UNIQUE_CONSTRAINTS
-
-If the underlying table has any unique constraints, if they are violated, you
-want to let the user know of this. Unfortunately databases provide unhelpful
-constraint violation messages such as:
-
-   ERROR 1062 (23000): Duplicate entry 'abc' for key 2
-
-In case of multiple constraints on the table, the only way to know which one
-has been violated is the "key 2" part of the message. The front-end needs to
-know which field should be highlighted with the error, so the
-UNIQUE_CONSTRAINTS function should be defined in your model having a
-relationship from the "key" in the error message to the column which should be
-highlighted as having the error in the front-end. For example:
-
-   sub UNIQUE_CONSTRAINTS { { 2 => 'name' } }
-
-In the case that the above error is received, an error will be displayed on the
-"name" field. If the model being defined is MyModel then the following key will
-be searched for:
-
-   Model.MyModel.name.alreadyexists
-   
-=head1 METHODS
-
-=head2 update($hash)
-
-Keys are field names; values are user-interface values e.g. "1,5" if the language
-is German.

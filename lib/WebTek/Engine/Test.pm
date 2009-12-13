@@ -9,7 +9,7 @@ sub prepare {
    my ($self, %params) = @_;
    
    #... prepare params
-   my $params = $params{'params'};
+   my $params = $params{params};
    foreach my $key (keys %$params) {
       Encode::_utf8_on($params->{$key}) unless ref $params->{$key};
       $params->{$key} = [$params->{$key}] if ref $params->{$key} ne 'ARRAY';
@@ -17,21 +17,21 @@ sub prepare {
    
    #... prepare request
    WebTek::Request->init;
-   request->cookies($params{'cookies'} || {});
+   request->cookies($params{cookies} || {});
    request->params($params);
-   request->hostname($params{'hostname'} || 'localhost');
-   request->remote_ip($params{'remote_ip'} || '127.0.0.1');
-   request->method(uc($params{'method'}) || 'GET');
-   request->headers($params{'headers'} || {});
-   request->unparsed_uri($params{'unparsed_uri'} || '/');
-   request->uri($params{'uri'} || '/');
-   request->path_info($params{'path_info'} || '');
-   request->location($params{'location'} || '');
-   request->uploads($params{'uploads'} || {});
-   request->user($params{'user'});
+   request->hostname($params{hostname} || 'localhost');
+   request->remote_ip($params{remote_ip} || '127.0.0.1');
+   request->method(uc($params{method}) || 'GET');
+   request->headers($params{headers} || {});
+   request->unparsed_uri($params{unparsed_uri} || '/');
+   request->uri($params{uri} || '/');
+   request->path_info($params{path_info} || '');
+   request->location($params{location} || '');
+   request->uploads($params{uploads} || {});
+   request->user($params{user});
    
    WebTek::Response->init;
-   config->{'session'}->{'class'}->init;
+   config->{session}{class}->init;
 }
 
 sub dispatch {

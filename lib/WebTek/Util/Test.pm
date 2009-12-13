@@ -18,7 +18,7 @@ package WebTek::Util::Test;
 
 use WebTek::Logger qw( ALL );
 
-my $Log = "";
+my $Log = '';
 my $Test = Test::Builder->new;
 *Test::Builder::_print = sub { $Log .= $_[1] };
 *Test::Builder::_print_diag = sub {
@@ -59,7 +59,7 @@ sub run {
       #... check and generate result
       my @tests = $Test->summary;
       if (grep !$_, @tests) {
-         log_error "     there were some failed tests, look at the details:";
+         log_error '     there were some failed tests, look at the details:';
          foreach (split /\n/, $Log) { log_error "        $_" };
       }
       push @result, @tests;

@@ -6,17 +6,14 @@ package WebTek::Cache;
 # delegate the cache methods to a subcalls (e.g. Cache::Memcached)
 
 use strict;
-use WebTek::App qw( app );
-use WebTek::Config qw( config );
 use WebTek::Loader;
-use WebTek::Exception;
+use WebTek::Config qw( config );
 
 our %Cache;
 our %Settings;
 
 sub import { #... when using this module, remember that
-   my $class = shift;
-   my @settings = @_;
+   my ($class, @settings) = @_;
    my $caller = caller;
    
    settings($caller, \@settings);
@@ -24,42 +21,40 @@ sub import { #... when using this module, remember that
 
 sub cache {
    my $config = shift || 'cache';
-   unless ($Cache{app->name}{$config}) {
-      if (my $class = config($config)->{'class'}) {
+   unless ($Cache{$::appname}{$config}) {
+      if (my $class = config($config)->{class}) {
          WebTek::Loader->load($class);
-         $Cache{app->name}{$config} = $class->new($config);                  
+         $Cache{$::appname}{$config} = $class->new($config);                  
       } else {
          # ... dummy cache which do nothing
-         $Cache{app->name}{$config} = __PACKAGE__;
+         $Cache{$::appname}{$config} = __PACKAGE__;
       }
    }
-   return $Cache{app->name}{$config};
+   return $Cache{$::appname}{$config};
 }
 
 sub settings {
    my $key = shift;
 
-   if (@_) { $Settings{app->name}{$key} = shift }
-   return $Settings{app->name}{$key};
+   if (@_) { $Settings{$::appname}{$key} = shift }
+   return $Settings{$::appname}{$key};
 }
 
-sub key { return join ",", (app->name, @_) }
+# ----------------------------------------------------------------------------
+# cache interface
+# ----------------------------------------------------------------------------
+
+sub key { join ",", ($::appname, @_) }
 
 sub set { }
 
-sub set_multi {
-   my $class = shift;
-   return [ map { $class->set(@$_) } @_ ];
-}
+sub set_multi { my $class = shift; [ map { $class->set(@$_) } @_ ] }
 
 sub add { }
 
 sub get { }
 
-sub get_multi {
-   my $class = shift;
-   return { map { $_ => $class->get($_) } @_ };
-}
+sub get_multi { my $class = shift; { map { $_ => $class->get($_) } @_ } }
 
 sub delete { }
 

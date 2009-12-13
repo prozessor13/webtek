@@ -33,7 +33,7 @@ sub load {
 sub init {
    my ($class, $handler, $coderef) = @_;
    my $name = WebTek::Util::subname_for_coderef($handler, $coderef);
-   my $attributes = WebTek::Attributes->attributes->{$coderef};
+   my $attributes = WebTek::Attributes->get($coderef);
    
    #... create wrapper for macro print output
    my $wrapper = sub {

@@ -19,7 +19,7 @@ sub import {
    my $caller = caller;
 
    #... remember parents in page
-   WebTek::Util::may_make_method($caller, "_parents", sub { @parents });
+   WebTek::Util::may_make_method($caller, '_parents', sub { @parents });
    #... remember parents children
    $class->set_parents($caller, @parents);
    #... create public methods from parents

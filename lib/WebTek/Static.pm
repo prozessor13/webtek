@@ -20,7 +20,7 @@ sub merge_static_file {
    log_debug "merge static file $file";
    
    #... check static dir
-   my $static = config->{'static'}->{'dir'};
+   my $static = config->{static}{dir};
    assert -d $static, "static-dir '$static' does not exists!";
 
    #... create missing subdirs
@@ -47,7 +47,7 @@ sub merge_static_file {
    #... set modify time to the newest file 
    utime @time, "$static/$file";
 
-   event->notify('static-file-copied', "$static/$file");
+   event->trigger(name => 'static-file-copied', args => [ "$static/$file" ]);
 }
 
 1;

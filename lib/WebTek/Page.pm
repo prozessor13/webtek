@@ -45,11 +45,9 @@ sub MASTER_TEMPLATE_ERROR { '/others/master.error' }
 sub CHILD_ORDER { [] }
 
 # ---------------------------------------------------------------------------
-# page cache for path/children/templates/messages
+# cache templates and messages
 # ---------------------------------------------------------------------------
 
-our %Paths;
-our %ChildPaths;
 our %Templates;
 our %Messages;
 
@@ -59,11 +57,14 @@ our %Messages;
 
 sub _init {
    my $class = shift;
+   $class->SUPER::_init;
    log_debug("$$: init page $class");
 
-   $Paths{$class} = [];
    $Messages{$class} = {};
    $Templates{$class} = {};
+   my $paths = $class->_reset('path', []);
+   my $actions = $class->_reset('action', {});
+   my $rest = $class->_reset('rest', {});
    
    #... extract code-attribute informations
    foreach (@{WebTek::Attributes->attributes_for_class($class)}) {
@@ -73,6 +74,9 @@ sub _init {
             
       #... process actions (create etag, cache and check-access logic)
       if (grep { /^Action/ } @$attributes) {
+         $actions->{$subname} = $coderef;
+         #... check if action is REST
+         $rest->{$subname} = $coderef if grep {/^Rest$/} @$attributes;
          #... create check-access logic
          if (my @c = grep {/^CheckAccess\(.+\)$/} @$attributes) {
             if ($c[0] =~ /^CheckAccess\((.+)\)$/) {
@@ -105,9 +109,9 @@ sub _init {
          if (grep { /^Cache/ } @$attributes) {
             my $exptime;
             foreach (@$attributes) { $exptime = $1 if /^Cache\((.*)\)$/ }
-            event->register(
-               'obj' => $class,
-               'name' => "$class\-after-action-$subname",
+            event->observe(
+               'scope' => $class,
+               'name' => "after-action-$subname",
                'method' => sub {
                   return if not request->is_get
                      or session->user
@@ -125,23 +129,20 @@ sub _init {
 
       #... process paths
       } elsif (my @p = grep $_, map { /^Path\((.*)\)/ && $1 } @$attributes) {
-         push @{$Paths{$class}}, [$subname, $_, qr#^\/*($1)#] foreach @p;
+         push @$paths, [$subname, $_, qr#^\/*($1)#] foreach @p;
 
-      #... process macros
-      } elsif (grep { /^Macro/ } @$attributes) {
-         WebTek::Macro->init($subname, $coderef);
       }
    }
    
    #... delete ChildPaths in parents, because they may changed
    if ($class->can('_parents')) {
-      foreach ($class->_parents) { $ChildPaths{$_} = undef }      
+      foreach ($class->_parents) { $_->_reset('child_path') }      
       #... check if _parents is defined in superclass
       if ($class->_parents && not defined &{"$class\::_parents"}) {
          WebTek::Parent->set_parents($class, $class->_parents);
       }
    } else {
-      WebTek::Util::may_make_method($class, "_parents", sub { () });
+      WebTek::Util::may_make_method($class, '_parents', sub { () });
    }
 }
 
@@ -154,7 +155,7 @@ sub new {
    
    my $self = $class->SUPER::new;
    $self->_errors({});
-   event->notify("$class-created", $self);
+   event->trigger(obj => $class, name => "created", args => [ $self ]);
    
    return $self;
 }
@@ -172,11 +173,11 @@ sub do_action {
    
    #... handle session for normal http requests
    unless ($is_rest) {
-      my $session = config->{'session'}->{'class'}->init;
-      event->register(
-         'name' => 'request-finalize-end',   # is this dangerous?
-         'obj' => $session,
-         'method' => sub {
+      my $session = config->{session}{class}->init;
+      event->observe(
+         name => 'request-finalize-end',   # is this dangerous?
+         obj => $session,
+         method => sub {
             $session->save;
             event->remove_all_on_object($session);
          },
@@ -186,7 +187,7 @@ sub do_action {
    #... call action
    eval {
       return $self->not_found unless $action and $self->can_action($action);
-      return $self->access_denied unless $self->check_access('action'=>$action);
+      return $self->access_denied unless $self->check_access(action => $action);
       response->status(201) if $is_rest and request->is_post;
       $self->$action;
    };
@@ -240,59 +241,57 @@ sub parent :Handler {
    
    #... set parent from parameter
    if ($parent) {
-      $self->{'parent'} = $parent
+      $self->{parent} = $parent
    
    #... try to create parent automatically
-   } elsif (not $self->{'parent'} and $self->_parents) {
+   } elsif (not $self->{parent} and $self->_parents) {
       foreach my $parent ($self->_parents) {
          if ($parent->can('new_from_child')) {
-            $self->{'parent'} = $parent->new_from_child($self);
+            $self->{parent} = $parent->new_from_child($self);
          #... lets try the 'new' constructor for Root Pages
          } elsif (not $parent->_parents) {
-            $self->{'parent'} = $parent->new;
+            $self->{parent} = $parent->new;
          }
-         last if $self->{'parent'};
+         last if $self->{parent};
       }
-      assert $self->{'parent'}, "cannot create parent of $class; ".
+      assert $self->{parent}, "cannot create parent of $class; ".
          "parent must have a 'new_from_child' method (or 'new' if Root)";
    }
 
    #... return parent
-   return $self->{'parent'};
+   return $self->{parent};
 }
 
 sub paginator {
    my ($self, $id) = (shift, shift);
 
-   assert $id, "no id defined!";
-   if (@_) { $self->{'__paginators'}->{$id} = shift }
-   return $self->{'__paginators'}->{$id};
+   assert $id, 'no id defined';
+   $self->{__paginators}->{$id} = shift if @_;
+   return $self->{__paginators}->{$id};
 }
 
 sub paginate {
    my ($self, %params) = @_;
    
-   assert $params{'id'}, "no id defined";
+   assert $params{id}, 'no id defined';
    
    my $paginator = WebTek::Paginator->new(
       %params,
-      'page' => $params{'page'} || request->param->page || undef,
-      'items_per_page' =>
-         $params{'items_per_page'} || request->param->items_per_page,
+      page => $params{page} || request->param->page || undef,
+      items_per_page =>
+         $params{items_per_page} || request->param->items_per_page,
    );
    
-   $self->paginator($params{'id'}, $paginator);
+   $self->paginator($params{id}, $paginator);
    return wantarray ? ($paginator->items, $paginator) : $paginator->items;
 }
 
-sub error_on { (shift->error_key_for(@_)) }
-
-sub error_key_for {
-   my ($self, $name) = (shift, shift);
+sub error_on {
+   my ($self, $name, @set) = @_;
    
-   if (@_) {   # set error-key for name
+   if (@set) {   # set error-key for name
       $self->has_errors(1);
-      $self->_errors->{$name} = shift;
+      $self->_errors->{$name} = shift @set;
    }
    return $self->_errors->{$name};
 }
@@ -343,8 +342,8 @@ sub access_denied {
 # ]
 sub child_paths {
    my $class = ref $_[0] || $_[0];
- 
-   return $ChildPaths{$class} if defined $ChildPaths{$class};
+
+   return $class->_info('child_path') if $class->_info('child_path');
    
    #... find and order children
    my @children = sort {
@@ -359,7 +358,7 @@ sub child_paths {
    #... collect all paths
    my @paths = ();
    foreach my $child (@children) {
-      push @paths, map { [ $child, @$_ ] } @{$Paths{$child}}
+      push @paths, map { [ $child, @$_ ] } @{$child->_info('path')}
    }
    #... sort paths
    #... paths starting with the most plain characters have the higest priority
@@ -369,25 +368,13 @@ sub child_paths {
        return $lenB <=> $lenA;
    } @paths;
    #... remember and return child paths
-   return $ChildPaths{$class} = \@paths;
+   return $class->_reset('child_path', \@paths);
 }
 
-sub can_path {
-   return $_[1] if WebTek::Attributes->is_path($_[0]->can($_[1]));
-   return undef;
-}
-                
-sub can_action {
-   return $_[1] if WebTek::Attributes->is_action($_[0]->can($_[1]));
-   return undef;
-}
-                
-sub can_rest {
-   my $method = lc(request->method);
-   return $method if WebTek::Attributes->is_rest($_[0]->can($method));
-   return undef;
-}
-                
+sub can_action { shift->_info('action')->{shift} };
+
+sub can_rest { shift->_info('rest')->{shift} };
+          
 # ---------------------------------------------------------------------------
 # macros
 # ---------------------------------------------------------------------------
@@ -403,9 +390,9 @@ sub page_name :Macro
 sub check_access :Macro :Param(action="index" action name) {
    my ($self, %params) = @_;
    
-   assert $params{'action'}, "no action defined!";
-   return 0 unless $self->can_action($params{'action'});
-   my $check_access = $self->can("$params{'action'}\_check_access");
+   assert $params{action}, "no action defined!";
+   return 0 unless $self->can_action($params{action});
+   my $check_access = $self->can("$params{action}\_check_access");
    return 1 unless $check_access;
    my $access = eval { $check_access->($self); 1 };
    if ($@) { log_debug "Page->check_access error in eval: $@" }
@@ -419,7 +406,7 @@ sub href :Macro
    my ($self, %params) = @_;
    
    #... generate url
-   my $href = $params{'action'};
+   my $href = $params{action};
    my $page = $self;
    while ($page) {
       $href = $page->path . "/$href";
@@ -442,16 +429,17 @@ sub message :Macro
    my ($self, %params) = @_;
    
    #... find language for request
-   $params{'language'} ||= request->language;
+   $params{language} ||= request->language;
    #... render message
-   my $k = $params{'key'} || $params{$params{'language'}};
-   return "" unless $k;
-   my $key = WebTek::Cache::key($params{'language'}, $k);
+   my $k = $params{key} || $params{$params{language}};
+   return '' unless $k;
+   my $key = WebTek::Cache::key($params{language}, $k);
+   $key .= ",$params{default}" if defined $params{default};
    my $compiled = $Messages{ref $self}{$key};
-   if (config->{'code-reload'} or not $compiled) {
+   if (config->{code_reload} or not $compiled) {
       my $message = WebTek::Message->message(%params);
       $compiled = eval { WebTek::Compiler->compile($self, $message) };
-      log_fatal "error compiling message $params{'key'}, details $@" if $@;
+      log_fatal "error compiling message $params{key}, details $@" if $@;
       $Messages{ref $self}{$key} = $compiled;
    }
    return $compiled->($self, \%params);
@@ -463,8 +451,8 @@ sub template :Macro
 {
    my ($self, %params) = @_;
    
-   assert $params{'name'}, "no templatename defined in template macro";
-   return $self->render_template($params{'name'}, \%params, 'die');
+   assert $params{name}, 'no templatename defined in template macro';
+   return $self->render_template($params{name}, \%params, 'die');
 }
 
 # ---------------------------------------------------------------------------
@@ -475,7 +463,7 @@ sub render_page {
    my ($self, $data) = @_;  # data is an optional obj
 
    #... render for the clients accepted format
-   my $method = "render_as_" . response->format;
+   my $method = 'render_as_' . response->format;
    assert $self->can($method), "cannot find method $method in '$self'";
    $self->$method($data);
 }
@@ -483,16 +471,13 @@ sub render_page {
 sub render_as_html {
    my $self = shift;
 
-   timer_start("render_as_html");
-  
-   #... set action
+   timer_start('render_as_html');
+   #... set defaults
    unless (response->action) {
       my $action = request->action eq 'index' ? '' : request->action;
-      response->action($self->href('action' => $action));
+      response->action($self->href(action => $action));
    }
-   #... set title
    unless (response->title) { response->title(request->uri) }
-   #... set body
    unless (response->body) {
       response->body($self->render_template(request->action));
    }
@@ -504,24 +489,25 @@ sub render_as_html {
    } else {
       response->write($self->render_template($self->MASTER_TEMPLATE_HTML));
    }
-
-   timer_end("render_as_html");
+   timer_end('render_as_html');
 }
 
 sub render_as_json {
    my $self = shift;
       
-   timer_start("render_as_json");
+   timer_start('render_as_json');
    response->content_type('text/javascript');
+   #... set/extend body
    my $body = response->body || {};
-   $body->{'error'} ||= $self->_errors if response->status >= 300;
-   $body->{'status'} ||= response->status;
-   $body->{'message'} ||= response->status =~ /^2\d\d$/
+   $body->{error} ||= $self->_errors if response->status >= 300;
+   $body->{status} ||= response->status;
+   $body->{message} ||= response->status =~ /^2\d\d$/
       ? 'OK'
       : response->message;
-   response->body($self->encode_js($body, { 'pretty' => response->pretty }));
+   response->body($self->encode_js($body, { pretty => response->pretty }));
+   #... write response as json
    response->write($self->render_template($self->MASTER_TEMPLATE_JSON));
-   timer_end("render_as_json");
+   timer_end('render_as_json');
 }
 
 # ---------------------------------------------------------------------------
@@ -603,10 +589,10 @@ sub render_template {
 
    #... get template
    my $tpl = $Templates{$class}->{$tplname};
-   if (config->{'code-reload'} or not $tpl) {
+   if (config->{code_reload} or not $tpl) {
       timer_start "load and compile tpl: $tplname";
       my $file = $self->find_template($tplname);
-      my $content = $file ? slurp($file) : "";
+      my $content = $file ? slurp($file) : '';
       my $compiled = eval { WebTek::Compiler->compile($self, $content) };
       log_fatal "error compiling template $file, details $@" if $@;
       $Templates{$class}->{$tplname} = $tpl = [$file, $compiled];
@@ -617,15 +603,15 @@ sub render_template {
    unless ($tpl->[0]) {
       die "cannot find template $tplname for page $class" if $die;
       log_warning "cannot find template $tplname for page $class";
-      return "";
+      return '';
    }
    
    #... render template
    my ($file, $compiled) = @$tpl;
    timer_start("render_template $file");
-   $tpl = "<!-- template-begin: $file -->$tpl" if config->{'tpl-debug'};
+   $tpl = "<!-- template-begin: $file -->$tpl" if config->{tpl_debug};
    my $result = $compiled->($self, $params);
-   $tpl = "$tpl<!-- template-end: $file -->" if config->{'tpl-debug'};
+   $tpl = "$tpl<!-- template-end: $file -->" if config->{tpl_debug};
    timer_end("render_template $file");
    return $result;
 }

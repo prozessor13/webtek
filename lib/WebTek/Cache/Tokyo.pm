@@ -16,10 +16,10 @@ use Encode qw( _utf8_on );
 sub new {
    my $class = shift;
    my $config = config(shift || 'cache')->{$class};
-   eval "require TokyoTyrant";
+   eval 'require TokyoTyrant';
    my $rdb = TokyoTyrant::RDB->new;
    log_error $rdb->errmsg($rdb->ecode)
-      unless $rdb->open($config->{'host'}, $config->{'port'});
+      unless $rdb->open($config->{host}, $config->{port});
    return bless \$rdb, $class;
 }
 

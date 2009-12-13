@@ -6,18 +6,17 @@ package WebTek::Config;
 # return config settings from config-files
 
 use strict;
-use WebTek::App qw( app );
-use WebTek::Logger;
 use WebTek::Exception;
-use WebTek::Data::Struct;
-use WebTek::Util::File qw( slurp );
+use WebTek::App qw( app );
 use WebTek::Export qw( config );
+use WebTek::Util::File qw( slurp );
+require WebTek::Logger;
 
 our %Config;
 
 sub config {
    my $name = shift || 'webtek'; 
-   my $config = $Config{app->name} or throw "Config not initialized!";
+   my $config = $Config{$::appname} or throw "Config not initialized!";
    my $result = $config->{$name};
    throw "no config found for name '$name.config'" unless defined $result;
    return $result;

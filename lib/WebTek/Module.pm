@@ -57,7 +57,7 @@ sub load {
    #... remember that the module is already loaded
    $Loaded{$package} = scalar @files;
    $INC{$incname} = $files[0];
-   event->notify('module-loaded', $package);
+   event->trigger('module-loaded', $package);
    
    return 1;
 }

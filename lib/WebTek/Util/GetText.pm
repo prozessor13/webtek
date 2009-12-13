@@ -17,20 +17,20 @@ sub _find_messages {
    my ($array, $info, $messages) = @_;
    
    foreach my $item (@$array) {
-      if (ref $item and $item->{'type'} eq 'macro') {
+      if (ref $item and $item->{type} eq 'macro') {
          #... find nested
-         foreach my $key (keys %{$item->{'params'}}) {
-            _find_messages($item->{'params'}->{$key}, $info, $messages);
+         foreach my $key (keys %{$item->{params}}) {
+            _find_messages($item->{params}{$key}, $info, $messages);
          }
          #... process message macros
-         my ($macro) = reverse split /\./, $item->{'name'};
+         my ($macro) = reverse split /\./, $item->{name};
          next unless $macro eq 'message';
-         next unless $item->{'params'}->{'key'};
-         my $param = $item->{'params'}->{'key'};
+         next unless $item->{params}{key};
+         my $param = $item->{params}{key};
          my $key = (@$param > 1 or ref $param->[0])
-            ? "nested message key"
+            ? 'nested message key'
             : $param->[0];
-         push @$messages, [$key, ["$info\:$item->{'line_number'}"]];
+         push @$messages, [$key, ["$info\:$item->{line_number}"]];
       }
    }
    
@@ -50,9 +50,9 @@ sub search_keys_in_pm {
       $lineno++;
       if ($line =~ /(self|Message)\-\>message(\(.*?\))?/) {
          my %params = eval $2;
-         my $key = $params{'key'}
-            ? $params{'key'}
-            : "nested message key";
+         my $key = $params{key}
+            ? $params{key}
+            : 'nested message key';
          push @gettext, [$key, ["$file\:$lineno"]];
       }
    }
@@ -74,7 +74,7 @@ sub search_keys_in_dir {
    
    #... search po's
    if (-d (my $d = "$dir/messages")) {
-      foreach my $file (WebTek::Util::find('name' => '*.po', 'dir' => $d)) {
+      foreach my $file (WebTek::Util::find(name => '*.po', dir => $d)) {
          my ($messages, $infos) = read_po($file);
          #... add message keys
          my @keys_msgs = map { [$_, []] } keys %$messages;
@@ -86,15 +86,15 @@ sub search_keys_in_dir {
          }
       }
    }
-   #... search tpls
+   #... search tpl's
    if (-d (my $d = "$dir/templates")) {
-      foreach my $file (WebTek::Util::find('name' => '*.tpl', 'dir' => $d)) {
+      foreach my $file (WebTek::Util::find(name => '*.tpl', dir => $d)) {
          my @keys_tpl = search_keys_in_tpl($file);
          push @keys, @keys_tpl if @keys_tpl;
       }      
    }
-   #... search pms
-   my @pms = WebTek::Util::find('name' => '*.pm', 'dir' => $dir);
+   #... search pm's
+   my @pms = WebTek::Util::find(name => '*.pm', dir => $dir);
    foreach my $file (@pms) {
       next unless $file =~ /^$dir\/[A-Z]/;
       my @keys_pms = search_keys_in_pm($file);

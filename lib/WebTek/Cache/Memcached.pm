@@ -15,12 +15,12 @@ use WebTek::Logger qw( log_warning );
 our $Loaded;
 
 BEGIN {
-   if (eval "use Cache::Memcached::Fast (); 1") {
-      $Loaded = "Cache::Memcached::Fast";
-   } elsif (eval "use Cache::Memcached (); 1") {
-      $Loaded = "Cache::Memcached";
+   if (eval 'use Cache::Memcached::Fast (); 1') {
+      $Loaded = 'Cache::Memcached::Fast';
+   } elsif (eval 'use Cache::Memcached (); 1') {
+      $Loaded = 'Cache::Memcached';
    } else {
-      die("Please install Cache::Memcached::Fast or Cache::Memcached");
+      die 'Please install Cache::Memcached::Fast or Cache::Memcached';
    }
 }
 
@@ -34,7 +34,7 @@ sub new {
 sub set {
    my ($self, $key, @set) = @_;
    return $$self->set(md5_hex(encode_utf8($key)), @set)
-      or log_warning("WebTek::Cache::Memcached cannot save key: $key");
+      or log_warning "WebTek::Cache::Memcached cannot save key: $key";
 }
 
 sub set_multi {
@@ -42,7 +42,7 @@ sub set_multi {
    my @sets2 = map [ md5_hex(encode_utf8($_->[0])), $_->[1] ], @sets;
    my @r = $$self->set_multi(@sets2);
    if (my @e = grep $_, map { @r[$_] ? undef : $sets[$_][0] } 0 .. $#r) {
-      log_warning("WebTek::Cache::Memcached cannot save keys: @e");
+      log_warning "WebTek::Cache::Memcached cannot save keys: @e";
    }
    return \@r;
 }
@@ -82,6 +82,6 @@ sub decr {
    return $$self->decr(md5_hex(encode_utf8($key)), @decr);
 }
 
-sub find { throw "method not supportet" }
+sub find { throw 'method not supportet' }
 
 1;

@@ -25,12 +25,12 @@ sub prepare {
 
    WebTek::Request->init;
 
-   my $is_utf8 = (config->{'charset'} =~ /utf-?8/i);
+   my $is_utf8 = (config->{charset} =~ /utf-?8/i);
       
    #... create Apache2::Request
-   my %config = %{config('mod_perl2')->{'request'}};
-   assert $config{'POST_MAX'}, "config request.POST_MAX not defined!";
-   assert $config{'TEMP_DIR'}, "config request.TEMP_DIR not defined!";
+   my %config = %{config('mod_perl2')->{request}};
+   assert $config{POST_MAX}, 'config request.POST_MAX not defined';
+   assert $config{TEMP_DIR}, 'config request.TEMP_DIR not defined';
    my $req = Apache2::Request->new(r, %config);
 
    request->hostname(r->hostname);
@@ -64,7 +64,7 @@ sub prepare {
          my ($key, $value) = @_;
          $params->{$key} ||= [];
          if ($is_utf8) { _utf8_on($value) }
-         else { $value = decode(config->{'charset'}, $value) }
+         else { $value = decode(config->{charset}, $value) }
          push @{$params->{$key}}, $value;
          1;
       });      
@@ -73,11 +73,11 @@ sub prepare {
 
    #... read uploads
    request->uploads({ map { $_->name => WebTek::Request::Upload->new(
-      'name' => $_->name,
-      'filename' => $_->filename,
-      'size' => $_->size,
-      'content_type' => $_->info->{'Content-Type'},
-      'tempname' => $_->tempname,
+      name => $_->name,
+      filename => $_->filename,
+      size => $_->size,
+      content_type => $_->info->{'Content-Type'},
+      tempname => $_->tempname,
    ) } map { $req->upload($_) } $req->upload });
 
    WebTek::Response->init;
@@ -95,8 +95,8 @@ sub error {
    log_error $error;
    r->content_type('text/html');
    r->status(500);
-   r->print("<html><body><b>general error</b>");
-   if (config()->{'display-general-errors-to-browser'}) {
+   r->print('<html><body><b>general error</b>');
+   if (config()->{display_general_errors_to_browser}) {
       $error =~ s/\n/<br>/g;
       r->print("<br><br>$error");
    }
@@ -112,7 +112,7 @@ sub finalize {
    #... print headers
    my %headers = %{response->headers};
    my $ct = response->content_type;
-   $ct .= "; charset=" . uc(response->charset) if $ct =~ /^text/;
+   $ct .= '; charset=' . uc(response->charset) if $ct =~ /^text/;
    r->content_type($ct);
    map { r->err_headers_out->set($_ => $headers{$_}) } keys %headers;
 

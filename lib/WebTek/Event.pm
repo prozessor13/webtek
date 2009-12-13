@@ -3,73 +3,67 @@ package WebTek::Event;
 # NOTE: this code is originally from adrian smith <adrian.m.smith@gmail.com>
 
 use strict;
-use WebTek::App qw( app );
 use WebTek::Util qw( assert );
-use WebTek::Logger qw( ALL );
-use WebTek::Exception;
 use WebTek::Export qw( event );
+use WebTek::Logger qw( log_debug log_fatal );
 
-our %SharedInstance;
+our %Event;
 
-sub new { bless { }, shift }
+sub _init { $Event{$::appname} ||= bless {} shift }
 
-sub event { $SharedInstance{app->name} ||= __PACKAGE__->new }
+sub event { $Event{$::appname} }
 
-sub register {
-   my ($self, %param) = @_;
+sub observe {
+   my ($self, %params) = @_;
+   my ($name, $method) = ($params{names} || $params{name}, $params{method});
+   assert $name, 'name not defined';
+   assert $method, 'method not defined';
    
-   assert $param{'name'}, "name not defined!";
-   assert $param{'method'}, "method not defined!";
-   
-   # set default values
-   my $names = ref $param{'name'} ? $param{'name'} : [$param{'name'}];
-   my $method = $param{'method'};
-   my $obj = $param{'obj'} || caller;
-   my $priority = $param{'priority'} || 5;
+   #... set default values
+   my $names = ref $name ? $name : [ $name ];
+   my $obj = $params{obj} || caller;
+   my $method = $params{method};
+   my $priority = $params{priority} || 5;
    
    foreach my $name (@$names) {
-      $self->{$name}->{'all'}->{"$obj->$method"} = [$obj, $method, $priority];
-      $self->_create_list($name);
-      log_debug "$$: registered event '$name' for $obj\->$method";      
+      $self->{$name}{all}{"$obj->$method"} = [$obj, $method, $priority];
+      _create_list($self->{$name});
+      log_debug "$$: observe event '$name' for $obj->$method";
    }
 }
 
-sub notify {
-   my ($self, $name, @args) = @_;
+sub trigger {
+   my ($self, %params) = @_;
 
-   foreach my $e (@{$self->{$name}->{'list'}}) {
-      my $obj = $e->[0];
-      my $method = $e->[1];
-      unless (eval { $obj->$method(@args); 1 }) {
-         log_fatal "error executing event '$name' on object $obj: $@";
+   my ($name, $args, @return) = ($params{name}, $params{args} || []);
+   foreach my $e (@{$self->{$name}{list} || []}) {
+      my ($obj, $method, $args) = @$e;
+      if (not $params{obj} or _eq($params{obj}, $obj)) {
+         eval { push @return, $obj->$method(@$args); 1 }
+            or log_fatal "error executing event '$name' on object $obj: $@";
+         log_debug "$$: called $obj\->$method for event '$name'";
       }
-      log_debug "$$: called $obj\->$method for event '$name'";
    }
+   return @return;
 }
 
 sub remove_all_on_object {
-   my $self = shift;
-   my $obj = shift;         # object, target of events
-
-   my $is_ref = ref $obj;
+   my ($self, $obj) = @_;   
+   
    while (my ($name, $info) = each %$self) {
-      foreach my $id (keys %{$info->{'all'}}) {
-         if ($is_ref) {
-            delete $info->{'all'}->{$id} if $info->{'all'}->{$id}->[0] == $obj;
-         } else {            
-            delete $info->{'all'}->{$id} if $info->{'all'}->{$id}->[0] eq $obj;
-         }
+      foreach my $id (keys %{$info->{all}}) {
+         delete $info->{all}{$id} if _eq($obj, $info->{all}{$id}[0]);
       }
-      $self->_create_list($name);
+      _create_list($self->{$name});
    }
+
    log_debug "$$: removed all events on $obj";
 }
 
+sub _eq { $_[0] == $_[1] || $_[0] eq $_[1] }
+
 sub _create_list {
-   my ($self, $name) = @_;
-   
-   my @list = sort { $a->[2] <=> $b->[2] } values %{$self->{$name}->{'all'}};
-   $self->{$name}->{'list'} = \@list;   
+   $_[0]->{list} = [sort { $a->[2] <=> $b->[2] } values %{$_[0]->{all}} ];
 }
 
 1;

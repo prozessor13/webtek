@@ -18,23 +18,23 @@ use WebTek::Data::Struct qw( struct );
 use WebTek::Export qw( response );
 use base qw( WebTek::Handler );
 
-make_accessor('messages', 'Hander');
-make_accessor('status', 'Macro');
-make_accessor('content_type', 'Macro');
-make_accessor('charset', 'Macro');
-make_accessor('body', 'Macro');
-make_accessor('action', 'Macro');
-make_accessor('title', 'Macro');
-make_accessor('format', 'Macro');
-make_accessor('buffer');
-make_accessor('headers');
-make_accessor('cookies');
-make_accessor('no_cache');
-make_accessor('pretty');
+make_accessor 'messages', 'Hander';
+make_accessor 'status', 'Macro';
+make_accessor 'content_type', 'Macro';
+make_accessor 'charset', 'Macro';
+make_accessor 'body', 'Macro';
+make_accessor 'action', 'Macro';
+make_accessor 'title', 'Macro';
+make_accessor 'format', 'Macro';
+make_accessor 'buffer';
+make_accessor 'headers';
+make_accessor 'cookies';
+make_accessor 'no_cache';
+make_accessor 'pretty';
 
 our $Response;
 
-sub response :Handler { $Response or throw "Response not initialized!" }
+sub response :Handler { $Response or throw 'Response not initialized' }
 
 sub init {
    my $self = shift->new;
@@ -42,10 +42,11 @@ sub init {
    $self->status(200);
    $self->headers({
       'Cache-Control' => 'no-cache',
-      'Expires' => date('now')->to_rfc_822,
+      'Pragma' => 'no-cache',
+      'Expires' => '-1',
    });
    $self->cookies({});
-   $self->charset(config->{'charset'});
+   $self->charset(config->{charset});
    $self->content_type('text/html');
    $self->format(request->format);
    $self->messages(WebTek::Response::Message->new);
@@ -62,11 +63,11 @@ sub write {
 sub cookie {
    my ($self, %args) = @_;  # args are "value", "name", "path"
    
-   assert $args{'name'}, "no name defined!";
-   $args{'path'} ||= request->location || '/';
+   assert $args{name}, 'no name defined';
+   $args{path} ||= request->location || '/';
    
-   $self->cookies->{$args{'name'}} = \%args;
-   log_debug "set cookie: $args{'name'}";
+   $self->cookies->{$args{name}} = \%args;
+   log_debug "set cookie: $args{name}";
 }
 
 sub header {
@@ -85,7 +86,7 @@ sub redirect {
       $self->header('X-Ajax-Redirect-Location' => $url);
       $self->write(' ');   # for safari :(
    } else {
-      $self->header('Location' => $url);
+      $self->header(Location => $url);
       $self->status($status);
    }
    #... remember things in session
@@ -101,16 +102,16 @@ sub json {
    
    # this code is from Encode::JavaScript::UCS
    my $js = $self->encode_js($data);
-   my $json = Encode::encode("ascii", $js, sub { sprintf("\\u%04x", $_[0]) });
+   my $json = Encode::encode('ascii', $js, sub { sprintf('\\u%04x', $_[0]) });
    $self->header('X-JSON' => $json);
 }
 
 sub message_macro :Macro {
    my ($self, %params) = @_;
    
-   my $name = $params{'name'} || 'default';
+   my $name = $params{name} || 'default';
    my $msg = $self->messages->$name();
-   $self->messages->$name($params{'flush'}) if exists $params{'flush'};
+   $self->messages->$name($params{flush}) if exists $params{flush};
    return $msg;
 }
 
@@ -124,7 +125,7 @@ sub message :Handler {
 package WebTek::Response::Message;
 
 use strict;
-use overload '""' => sub { shift->{'default'} };
+use overload '""' => sub { shift->{default} };
 
 our $AUTOLOAD;
 

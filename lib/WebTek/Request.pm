@@ -14,33 +14,33 @@ use WebTek::Attributes qw( MODIFY_CODE_ATTRIBUTES );
 use WebTek::Export qw( request );
 use base qw( WebTek::Handler );
 
-make_accessor('path', 'Handler');	# WebTek::Request::Path object
-make_accessor('param', 'Handler');
-make_accessor('uri', 'Macro');
-make_accessor('unparsed_uri', 'Macro');
-make_accessor('path_info', 'Macro');
-make_accessor('location', 'Macro');	# Apache <location> e.g. "/webtek-app"
-make_accessor('hostname', 'Macro');	# e.g. "www.myserver.com"
-make_accessor('remote_ip', 'Macro');
-make_accessor('page', 'Macro');
-make_accessor('action', 'Macro');
-make_accessor('method', 'Macro');	# e.g. "POST"
-make_accessor('language', 'Macro');
-make_accessor('is_ajax', 'Macro');
-make_accessor('user_agent', 'Macro');
-make_accessor('referer', 'Macro');
-make_accessor('country', 'Macro');
-make_accessor('accept', 'Macro');
-make_accessor('format', 'Macro');
-make_accessor('user', 'Macro');
-make_accessor('cookies');
-make_accessor('uploads');
-make_accessor('no_cache');
-make_accessor('data');
+make_accessor 'path', 'Handler';	      # WebTek::Request::Path object
+make_accessor 'param', 'Handler';
+make_accessor 'uri', 'Macro';
+make_accessor 'unparsed_uri', 'Macro';
+make_accessor 'path_info', 'Macro';
+make_accessor 'location', 'Macro';	   # Apache <location> e.g. "/webtek-app"
+make_accessor 'hostname', 'Macro';	   # e.g. "www.myserver.com"
+make_accessor 'remote_ip', 'Macro';
+make_accessor 'page', 'Macro';
+make_accessor 'action', 'Macro';
+make_accessor 'method', 'Macro';	      # e.g. "POST"
+make_accessor 'language', 'Macro';
+make_accessor 'is_ajax', 'Macro';
+make_accessor 'user_agent', 'Macro';
+make_accessor 'referer', 'Macro';
+make_accessor 'country', 'Macro';
+make_accessor 'accept', 'Macro';
+make_accessor 'format', 'Macro';
+make_accessor 'user', 'Macro';
+make_accessor 'cookies';
+make_accessor 'uploads';
+make_accessor 'no_cache';
+make_accessor 'data';
 
 our $Request;
 
-sub request :Handler { $Request or throw "Request not initialized" }
+sub request :Handler { $Request or throw 'Request not initialized' }
 
 sub init {
    $Request = shift->new;
@@ -67,21 +67,21 @@ sub headers :Handler {
    #... parse and set headers
    if (@_) {
       my $headers = shift;
-      my $accept = $headers->{'Accept'};
+      my $accept = $headers->{Accept};
       $self->accept($accept);
-      $self->format(config->{'format-for-content-type'}->{$accept} || 'html');
+      $self->format(config->{format_for_content_type}{$accept} || 'html');
       $self->user_agent($headers->{'User-Agent'});
-      $self->referer($headers->{'Referer'});
+      $self->referer($headers->{Referer});
       $self->is_ajax($headers->{'X-Requested-With'} eq 'XMLHttpRequest');
       $self->language(lc substr $headers->{'Accept-Language'}, 0, 2);
       $self->country(lc substr $headers->{'Accept-Language'}, 3, 2);
-      $self->{'headers'} = $headers;
+      $self->{headers} = $headers;
    }
    
    #... set defaults
-   $self->language(config->{'default-language'}) unless $self->language;
+   $self->language(config->{default_language}) unless $self->language;
    
-   return $self->{'headers'};
+   return $self->{headers};
 }
 
 sub params :Handler {
@@ -94,24 +94,24 @@ sub params :Handler {
       WebTek::Request::Param->_new($params);
       $self->param(WebTek::Request::Param->_new($params));
       #... group params
-      my $grouped = $self->{'params'} = WebTek::Request::Param->_new({});
-      foreach (sort { @$b <=> @$a } map {[reverse split "___"]} keys %$params) {
+      my $grouped = $self->{params} = WebTek::Request::Param->_new({});
+      foreach (sort { @$b <=> @$a } map [reverse split '___'], keys %$params) {
          my ($group, $key, @groups) = ($grouped, @$_);
          @groups = reverse @groups;
-         my $name = join "___", (@groups, $key);
+         my $name = join '___', (@groups, $key);
          foreach my $g (@groups) {
             $group = $group->_handler($g)
                || $group->_handler($g, WebTek::Request::Param->_new({}));
          }
          if ($group->_handler($name)) {
-            log_warning "omit param $name, because a group alreay exists!";            
+            log_warning "omit param $name, because a group alreay exists!";
          } else {
             $group->_param($key, $params->{$name});
          }
       }
    }
    
-   return $self->{'params'};
+   return $self->{params};
 }
 
 package WebTek::Request::Path;
@@ -152,16 +152,16 @@ sub _new {
    
    return bless {
       (map { $_ => $params->{$_}->[0] } keys %$params),
-      '_params' => $params,
-      '_handlers' => {},
+      _params => $params,
+      _handlers => {},
    }, $class;
 }
 
 sub _handler {
    my ($self, $name, @handler) = @_;
    
-   $self->{'_handlers'}->{$name} = $handler[0] if @handler;
-   return $self->{'_handlers'}->{$name};
+   $self->{_handlers}{$name} = $handler[0] if @handler;
+   return $self->{_handlers}{$name};
 }
 
 sub _macro { $_[0]->{$_[1]} }
@@ -171,19 +171,19 @@ sub _param {
 
    #... set param
    if (@param) {
-      $self->{'_params'}->{$name} = $param[0];
-      $self->{$name} = $self->{'_params'}->{$name}->[0];
+      $self->{_params}{$name} = $param[0];
+      $self->{$name} = $self->{_params}{$name}->[0];
    }
    #... get param
-   return $self->{'_params'}->{$name};
+   return $self->{_params}{$name};
 }
 
 sub to_hash {
    my $self = shift;
    
    my $hash = { %$self };
-   delete $hash->{'_params'};
-   delete $hash->{'_handlers'};
+   delete $hash->{_params};
+   delete $hash->{_handlers};
    return $hash;
 }
 
@@ -205,11 +205,11 @@ package WebTek::Request::Upload;
 
 use WebTek::Util qw( make_accessor );
 
-make_accessor('name');
-make_accessor('filename');
-make_accessor('content_type');
-make_accessor('size');
-make_accessor('tempname');
+make_accessor 'name';
+make_accessor 'filename';
+make_accessor 'content_type';
+make_accessor 'size';
+make_accessor 'tempname';
 
 sub new { bless { @_[1 .. $#_] }, $_[0] }
 

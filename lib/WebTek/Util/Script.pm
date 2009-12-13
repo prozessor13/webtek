@@ -20,58 +20,57 @@ sub assert { throw $_[1] unless $_[0] }
 sub model :Info(model <model-name> -> creates a new model) {
    my ($webtekdir, $appname, $appdir, $module, $args, $argv) = @_;
    
-   assert $argv->[0], "no modelname defined!";
+   assert $argv->[0], 'no modelname defined';
    assert
       !-e "$appdir$module/Model/$argv->[0].pm",
       "Model $argv->[0].pm already exists!\n";
-   _copy(@_, "Model.pm", "$appdir$module/Model/$argv->[0].pm");
-   _copy(@_, "Test.t", "$appdir$module/scripts/test/Model/$argv->[0].t");
+   _copy(@_, 'Model.pm', "$appdir$module/Model/$argv->[0].pm");
+   _copy(@_, 'Test.t', "$appdir$module/scripts/test/Model/$argv->[0].t");
 }
 
 sub page :Info(page <page-name> -> creates a new page) {
    my ($webtekdir, $appname, $appdir, $module, $args, $argv) = @_;
 
-   assert $argv->[0], "no pagename defined!";
+   assert $argv->[0], 'no pagename defined';
    assert
       !-e "$appdir$module/Page/$argv->[0].pm",
       "Page $argv->[0].pm already exists!\n";
-   _copy(@_, "Page.pm", "$appdir$module/Page/$argv->[0].pm");
-   _copy(@_, "index_page.tpl", "$appdir$module/templates/$argv->[0]/index.tpl");
-   _copy(@_, "Test.t", "$appdir$module/scripts/test/Page/$argv->[0].t");
+   _copy(@_, 'Page.pm', "$appdir$module/Page/$argv->[0].pm");
+   _copy(@_, 'index_page.tpl', "$appdir$module/templates/$argv->[0]/index.tpl");
 }
 
-sub pre_module :Info(module <module-name> -> creates a new module) {
+sub library :Info(library <name> -> creates a new library skeleton) {
    my ($webtekdir, $appname, $appdir, $module, $args, $argv) = @_;
 
    my $m = $argv->[0];
-   assert $m, 'no modulename defined';
-   assert !-d "$appdir/pre-modules/$m", "Module $m already exists!";
+   assert $m, 'no library name defined';
+   assert !-d "$appdir/libraries/$m", "Library $m already exists";
 
-   _makedir("$appdir/pre-modules/$m/Page");
-   _makedir("$appdir/pre-modules/$m/Model");
-   _makedir("$appdir/pre-modules/$m/templates");
-   _makedir("$appdir/pre-modules/$m/config");
-   _makedir("$appdir/pre-modules/$m/messages");
-   _makedir("$appdir/pre-modules/$m/static");
-   _makedir("$appdir/pre-modules/$m/scripts");
-   _makedir("$appdir/pre-modules/$m/scripts/test");
+   _makedir("$appdir/libraries/$m/Page");
+   _makedir("$appdir/libraries/$m/Model");
+   _makedir("$appdir/libraries/$m/templates");
+   _makedir("$appdir/libraries/$m/config");
+   _makedir("$appdir/libraries/$m/messages");
+   _makedir("$appdir/libraries/$m/static");
+   _makedir("$appdir/libraries/$m/scripts");
+   _makedir("$appdir/libraries/$m/scripts/test");
 }
 
-sub post_module :Info(module <module-name> -> creates a new module) {
+sub module :Info(module <name> -> creates a new module) {
    my ($webtekdir, $appname, $appdir, $module, $args, $argv) = @_;
 
    my $m = $argv->[0];
-   assert $m, 'no modulename defined';
-   assert !-d "$appdir/post-modules/$m", "Module $m already exists!";
+   assert $m, 'no module name defined';
+   assert !-d "$appdir/modules/$m", "Module $m already exists!";
 
-   _makedir("$appdir/post-modules/$m/Page");
-   _makedir("$appdir/post-modules/$m/Model");
-   _makedir("$appdir/post-modules/$m/templates");
-   _makedir("$appdir/post-modules/$m/config");
-   _makedir("$appdir/post-modules/$m/messages");
-   _makedir("$appdir/post-modules/$m/static");
-   _makedir("$appdir/post-modules/$m/scripts");
-   _makedir("$appdir$module/post-modules/$m/scripts/test");
+   _makedir("$appdir/modules/$m/Page");
+   _makedir("$appdir/modules/$m/Model");
+   _makedir("$appdir/modules/$m/templates");
+   _makedir("$appdir/modules/$m/config");
+   _makedir("$appdir/modules/$m/messages");
+   _makedir("$appdir/modules/$m/static");
+   _makedir("$appdir/modules/$m/scripts");
+   _makedir("$appdir/modules/$m/scripts/test");
 }
 
 sub console :Info(console -> starts the webtek console) {
@@ -82,13 +81,13 @@ sub console :Info(console -> starts the webtek console) {
    WebTek::Loader->reset;
    WebTek::Loader->reload('safe');
 
-   print "Welcome to the WebTek Console\n\n";
+   print 'Welcome to the WebTek Console\n\n';
    while (1) {
-      print "> ";
+      print '> ';
       my $cmd = <STDIN>;
       exit if $cmd =~ /^q|quit|exit|bye$/;
       $cmd = WebTek::Module->source_filter($cmd);
-      WebTek::Loader->reload('safe') if config->{'code-reload'};
+      WebTek::Loader->reload('safe') if config->{code_reload};
       my $output = eval "no strict; $cmd" || $@;
       print $output;
       print "\n" unless $output =~ /\n$/;
@@ -98,9 +97,9 @@ sub console :Info(console -> starts the webtek console) {
 sub script :Info(script <filename> -> starts a script for this app) {
    my ($webtekdir, $appname, $appdir, $module, $args, $argv) = @_;
    
-   assert $argv->[0], "no script-filename defined!";
+   assert $argv->[0], 'no script-filename defined';
    my $file = app->dir . '/' . $argv->[0];
-   assert -e $file, "script-filename not exists!";
+   assert -e $file, 'script-filename not exists';
    shift @::argv;
    my $ok = eval {
       WebTek::Module->do($file),
@@ -123,7 +122,7 @@ sub translate :Info(translate <language>,... -> generate .po files) {
       foreach my $language (@languages) {
          my $file = "$dir/messages/$language.po";
          my @missing_keys = grep {
-            !WebTek::Message->exists('language' => $language, 'key' => $_->[0])
+            !WebTek::Message->exists(language => $language, key => $_->[0])
          } @all_keys;
          if (@missing_keys) {
             print "update file $file with " . @missing_keys . " missing keys\n";
@@ -132,7 +131,7 @@ sub translate :Info(translate <language>,... -> generate .po files) {
                : "msgid \"\"\n" .
                  "msgstr \"Content-Type: text/plain; charset=UTF-8\"\n\n";
             foreach my $key (@missing_keys) {
-               my $src = @{$key->[1]} ? "#: ".join(",",@{$key->[1]})."\n" : "";
+               my $src = @{$key->[1]} ? '#: '.join(',',@{$key->[1]})."\n" : '';
                $content .= "$src\msgid \"$key->[0]\"\nmsgstr \"\"\n\n";
             }
             WebTek::Util::write($file, $content);
@@ -157,15 +156,15 @@ sub test :Info(test -> run all tests) {
       ? @$argv
       : grep(-d, map { "$_/scripts/test" } @{app->dirs});
    foreach (@dirs) {
-      foreach my $file (WebTek::Util::File::find('dir'=>$_, 'name'=>'*.t')) {
+      foreach my $file (WebTek::Util::File::find(dir => $_, name => '*.t')) {
          push @tests, WebTek::Util::Test->run($file);
       }
    }
 
    print "\nresult: \n";
-   print " - planned: " . @tests . "\n";
-   print " - successful: " . (grep $_, @tests) . "\n";
-   print " - failed: " . (grep !$_, @tests) . "\n";
+   print ' - planned: ' . @tests . "\n";
+   print ' - successful: ' . (grep $_, @tests) . "\n";
+   print ' - failed: ' . (grep !$_, @tests) . "\n";
 }
 
 sub migrate
@@ -181,7 +180,7 @@ sub migrate
    my $cmd = $argv->[0];
    assert
       $cmd =~ /^(up|down|list|history|create)$/ ? 1 : 0,
-      "invalid migration command";
+      'invalid migration command';
    app->env([@{app->env || []}, 'migrate']);
    WebTek::DB->DESTROY;
    WebTek::Loader->reset;
@@ -189,14 +188,14 @@ sub migrate
 
    #... manage the history-file
    my $history = sub {
-      my @h = -f ".migration.history"
-         ? split "\n", slurp(".migration.history")
+      my @h = -f '.migration.history'
+         ? split "\n", slurp('.migration.history')
          : ();
       if (@_) {
          my $name = shift;
-         my $time = date('now')->to_string('format' => "%Y-%m-%d %H:%M:%S");
+         my $time = date('now')->to_string(format => '%Y-%m-%d %H:%M:%S');
          push @h, "$time\t$name\t$cmd";
-         WebTek::Util::write(".migration.history", join "\n", @h);
+         WebTek::Util::write('.migration.history', join "\n", @h);
       }
       return @h;
    };
@@ -206,7 +205,7 @@ sub migrate
          /((pre|post)-modules\/(\w+))?\/scripts\/migrate\/(\d+_\w+.pl)$/
             ? $3 ? "$4\@$2:$3" : $4 : ''
       } map {
-         WebTek::Util::find('dir'=> $_, 'name'=> '*.pl');
+         WebTek::Util::find(dir => $_, name => '*.pl');
       } grep -d $_, map { "$_/scripts/migrate" } @{app->dirs};
    };
    
@@ -234,7 +233,7 @@ sub migrate
       foreach my $name (grep { not $alreay_done->($_) } $list->()) {
          print "do an $cmd migration of $name\n";
          my $ok = eval {
-            WebTek::Module->do("" . $fname->($name));
+            WebTek::Module->do('' . $fname->($name));
             main::up();
             DB->commit;
             1;
@@ -246,7 +245,7 @@ sub migrate
       foreach my $name (reverse grep { $alreay_done->($_) } $list->()) {
          print "do an $cmd migration of $name\n";
          my $ok = eval {
-            WebTek::Module->do("".$fname->($name));
+            WebTek::Module->do('' . $fname->($name));
             main::down();
             DB->commit;
             1;
@@ -264,12 +263,12 @@ sub migrate
    } elsif ($cmd eq 'history') {
       print join("\n", $history->()) . "\n";
    } elsif ($cmd eq 'create') {
-      my $t = date('now')->to_string('format' => "%Y%m%d%H%M%S");
+      my $t = date('now')->to_string(format => '%Y%m%d%H%M%S');
       my $filename = $fname->("$t\_$argv->[1].pl");
-      $filename = $fname->("$t\_$argv->[1].pl\@$1:$2")         
+      $filename = $fname->("$t\_$argv->[1].pl\@$1:$2")
          if $module =~ /\/(pre|post)-modules\/(.+)/;
-      assert($filename, "no valid name defined!");
-      _copy(@_, "Migration.pl", $filename);
+      assert($filename, 'no valid name defined');
+      _copy(@_, 'Migration.pl', $filename);
    }
 }
 
@@ -281,13 +280,13 @@ sub _copy {
    my ($webtekdir, $appname, $appdir, $module, $args, $argv, $infile, $outfile) = @_;
    
    #... create missing directories
-   my @dir = grep $_, split "/", $outfile;
+   my @dir = grep $_, split '/', $outfile;
    pop @dir;
-   _makedir(join "/", @dir);
+   _makedir(join '/', @dir);
 
    #... copy file
    print " => create $outfile\n";
-   my $file = "";
+   my $file = '';
    my ($packagename, $packagename_last) = ($argv->[0], $argv->[0]);
    $packagename =~ s/\//::/g;
    $packagename_last =~ s/(.*\/)?([^\/]+)$/$2/;
@@ -308,9 +307,9 @@ sub _copy {
 }
 
 sub _makedir {
-   my ($makedir, $dir) = (shift, "");
+   my ($makedir, $dir) = (shift, '');
 
-   foreach (grep $_, split "/", $makedir) {
+   foreach (grep $_, split '/', $makedir) {
       $dir .= "/$_";
       unless (-d $dir) {
          print " => create $dir\n";
@@ -321,7 +320,7 @@ sub _makedir {
 
 sub _info {
    my $attrs = WebTek::Attributes->attributes_for_class('WebTek::Util::Script');
-   my @cmds = map { /Info\((.*)\)/ ? $1 : "" } map @{$_->[1]}, @$attrs;
+   my @cmds = map { /Info\((.*)\)/ ? $1 : '' } map @{$_->[1]}, @$attrs;
    return join "\n", map { "   $_" } grep { $_ } @cmds;
 }
 

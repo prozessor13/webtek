@@ -17,29 +17,29 @@ our $AUTOLOAD;
 our $Session;
 
 #... get the session for the actual request
-sub session :Handler { $Session or throw "Session not initialized" }
+sub session :Handler { $Session or throw 'Session not initialized' }
 
 #... define handlers/macros
-make_accessor('user', 'Handler', 'Macro');
-make_accessor('country', 'Macro');
-make_accessor('language', 'Macro');
+make_accessor 'user', 'Handler', 'Macro';
+make_accessor 'country', 'Macro';
+make_accessor 'language', 'Macro';
 
 #... load globals here to load attributes correctly
 use WebTek::Globals;
 
-sub _init { die "WebTek::Session::_init not implemented!" }
+sub _init { die 'WebTek::Session::_init not implemented' }
 
-sub find_one { die "WebTek::Session::find_one not implemented!" }
+sub find_one { die 'WebTek::Session::find_one not implemented' }
 
 #... fetch cookie from db or create a new session
 sub init {
    my $class = shift;
 
    #... check for an already existing session
-   if (my $id = request->cookie(config->{'session'}->{'cookie-name'})) {
+   if (my $id = request->cookie(config->{session}{cookie_name})) {
       my $session = $class->find_one(
-         'id' => $id,
-         'ip_address' => request->remote_ip,
+         id => $id,
+         ip_address => request->remote_ip,
       );
       if ($session and not $session->is_expired) {
          $session->expand;
@@ -70,39 +70,39 @@ sub create_new_for_ip {
    #... create unique session key
    my $id;
    while (1) {
-      $id = "";
+      $id = '';
       foreach (0 .. 31) {
-         my $x = sprintf "%1x", int(rand(16));
+         my $x = sprintf '%1x', int(rand(16));
          $id .= "$x";
       }
       #... check if id is not already used
-      last unless $class->find_one('id' => $id);
+      last unless $class->find_one(id => $id);
    }
    
    #... set session cookie
    WebTek::Response::response()->cookie(
-      'name' => config->{'session'}->{'cookie-name'},
-      'value' => $id,
-      'path' => config->{'session'}->{'cookie-path'},
+      name => config->{session}{cookie_name},
+      value => $id,
+      path => config->{session}{cookie_path},
    );
    
    #... create and return session obj
    return $class->new(
-      'id' => $id,
-      'data' => {},
-      'ip_address' => $ip_address,
-      'create_time' => date('now'),
+      id => $id,
+      data => {},
+      ip_address => $ip_address,
+      create_time => date(now),
    );
 }
 
 sub is_expired { (
-   time > $_[0]->create_time + config->{'session'}->{'expiry-time'}
+   time > $_[0]->create_time + config->{session}{expiry_time}
 ) }
 
 sub expand { $_[0]->create_time(date('now')) }
 
 # --------------------------------------------------------------------------
-# AUTOLOAD for direct access to $self->{'data'} in code and macro
+# AUTOLOAD for direct access to $self->{data} in code and macro
 # --------------------------------------------------------------------------
 
 sub _macro {

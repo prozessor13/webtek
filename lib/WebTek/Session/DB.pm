@@ -15,12 +15,12 @@ our $LastCleanup = {};
 
 sub CLEANUP_INTERVAL { 10 * 60 } # in seconds
 
-sub DATATYPES { { 'data' => DATA_TYPE_BLOB } }
+sub DATATYPES { { data => DATA_TYPE_BLOB } }
 
 sub TABLE_NAME { 'session' }
 
 #... register notificatins 
-event->register('name' => 'request-end', 'method' => 'cleanup');
+event->observe(name => 'request-end', method => 'cleanup');
 
 sub _macro { # HACK because of multiple inheritance
    my ($self, $name) = @_;
@@ -40,9 +40,9 @@ sub new_from_db {
    my $self = $class->SUPER::new_from_db($content);
    $self->data($self->data ? thaw(decode_base64($self->data)) : {});
    #... store user, content, language in session
-   $self->user($self->data->{'user'});
-   $self->language($self->data->{'language'});
-   $self->country($self->data->{'country'});
+   $self->user($self->data->{user});
+   $self->language($self->data->{language});
+   $self->country($self->data->{country});
    
    return $self;
 }
@@ -51,9 +51,9 @@ sub save {
    my $self = shift;
    
    #... save user, country, language in data
-   $self->data->{'user'} = $self->user;
-   $self->data->{'language'} = $self->language;
-   $self->data->{'country'} = $self->country;
+   $self->data->{user} = $self->user;
+   $self->data->{language} = $self->language;
+   $self->data->{country} = $self->country;
    #... serialize data and save in db
    $self->data(encode_base64(freeze($self->data))); # serialize
    $self->SUPER::save;
@@ -68,8 +68,8 @@ sub cleanup {
    my $class = shift;
    
    return if $LastCleanup->{app->name} + CLEANUP_INTERVAL > time;
-   log_debug "WebTek::Session: do a cleanup in DB";
-   my $expiry_time = config->{'session'}->{'expiry-time'};
+   log_debug 'WebTek::Session: do a cleanup in DB';
+   my $expiry_time = config->{session}{expiry_time};
    my $invalid_time = date(time - $expiry_time)->to_db($class->_db);
    my $sessions = $class->where("create_time < '$invalid_time'");
    foreach my $session (@$sessions) { $session->delete }
