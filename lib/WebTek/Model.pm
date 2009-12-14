@@ -12,7 +12,7 @@ use WebTek::Event qw( event=>_event );
 use WebTek::Data::Date qw( date=>_date );
 use WebTek::Logger qw( log_debug log_warning );
 use WebTek::Data::Struct  qw( struct=>_struct );
-use WebTek::Util qw( assert=>__assert make_accessor => __make_accessor );
+use WebTek::Util qw( assert=>__assert make_accessor=>__make_accessor );
 use Scalar::Util qw( blessed );
 use base qw( WebTek::Handler );
 
@@ -56,7 +56,7 @@ sub import {
    my @handler = $export{handler} =~ /(\w)(\s*:public)?/i;
    __assert scalar(@handler), "handler not defined for $caller";
    my @attrs = $handler[1] ? ('Handler', 'Public') : ('Handler');
-   WebTek::Util::may_make_method($caller, $handler, undef, @attrs);
+   WebTek::Util::may_make_method($caller, $handler[0], undef, @attrs);
 }
 
 # --------------------------------------------------------------------------
@@ -127,20 +127,20 @@ sub _columns {
    my $class = shift;
    $class = ref $class || $class;
    
-   $Columns{$::appname}{$class} = shift if @_;
+   $Columns{$::appname}{$class} = shift() if @_;
    return $Columns{$::appname}{$class};
 }
 
 sub _foreign_keys {
    my $class = shift;
-   $f_keys = $Has_a{$::appname}{ref $class || $class};
+   my $f_keys = $Has_a{$::appname}{ref $class || $class};
    
    return [ map [ $_, @{$f_keys->{$_}} ], keys %$f_keys ];
 }
 
 sub _init {
    my $class = shift;
-   
+   $class->SUPER::_init;
    no strict 'refs';
 
    #... check if model is a real model
@@ -162,8 +162,8 @@ sub _init {
       $class->_real($real);
       log_debug "$$: copy modelinfos from $real into not real model $class";
       #... set model info
-      $class->_columns($real->columns);
-      $class->_primary_keys($real->primary_keys);
+      $class->_columns($real->_columns);
+      $class->_primary_keys($real->_primary_keys);
       $class->has_a(@$_[1,2,3]) foreach @{$real->foreign_keys};
       WebTek::Util::may_make_method($class, '_class', sub { $class });
       return;
@@ -202,15 +202,15 @@ sub _init {
    my $primary_keys = $class->_db->primary_keys($tablename);
    __assert scalar(@$primary_keys), "no primary keys defined for '$tablename'";
 
-   #... create model accessor methods
-   foreach my $column (@$columns) {
-      $class->_make_accessor($column->{name});
-      $class->has_a($column->{name}) if $column->{name} =~ /^.+_id$/;
-   }
-   
    #... remember colums and primary keys
    $class->_columns($columns);
    $class->_primary_keys($primary_keys);
+
+   #... create model accessor methods
+   foreach my $column (@$columns) {
+      $class->_make_accessor($column->{name}, $column->{webtek_data_type});
+      $class->has_a($column->{name}) if $column->{name} =~ /^.+_id$/;
+   }
 }
 
 # --------------------------------------------------------------------------
@@ -299,7 +299,7 @@ sub find {
    my $fetch = $params{fetch} || "*";
    my $where = $params{where} ? "where $params{where}" : '';
    my $args = $params{args} || []; 
-   $order = '' if $fetch = 'count(*)';
+   $order = '' if $fetch eq 'count(*)';
    delete @params{qw( fetch limit offset order combine where args )};
    # single table inheritance
    $params{'class'} ||= $class->_class if $class->can('_class');
@@ -361,9 +361,9 @@ sub update {
 sub _update {
    my ($self, $params) = @_;
    my %modified;
-
+   
    #... update foreign keys
-   foreach my $f_key (@{$self->foreign_keys}) {
+   foreach my $f_key (@{$self->_foreign_keys}) {
       my ($column, $accessor, $model, $constructor) = @$f_key;
       if (exists $params->{$column}) {
          my $id = $params->{$column};
@@ -381,10 +381,10 @@ sub _update {
    }
    
    #... update normal content
-   foreach my $name (map $_->{name}, @{$self->columns}) {
+   foreach my $name (map $_->{name}, @{$self->_columns}) {
       $modified{$name} = $params->{$name} if exists $params->{$name};
    }
-   
+
    #... update obj state
    delete $self->{_accessors}{$_} foreach keys %modified;
    $self->{_modified} = { %{$self->_modified}, %modified };
@@ -403,11 +403,11 @@ sub _fetch {
    
    #... get obj
    my $obj = $class->find_one(%params) or WebTek::Exception->
-      throw("$self->_fetch: cannot find db-entry for " . struct(\%params));
+      throw("$self->_fetch: cannot find db-entry for " . _struct(\%params));
    
    #... copy obj to self
    my ($from, $to) = ($obj->{_content}, $self->{_content});
-   $to{$_} = $from{$_} foreach (keys %$from);
+   $to->{$_} = $from->{$_} foreach (keys %$from);
 
    #... update obj state
    $self->{_in_db} = 1;
@@ -420,18 +420,18 @@ sub _fetch {
 
 #... create an accessor to access db-columns via a method
 sub _make_accessor {
-   my ($class, $method) = @_;
-   
+   my ($class, $name, $type) = @_;
+
    my $sub = sub {
       my $self = shift;
 
-      $self->_update({ $method => shift }) if @_;
-      my $a = $self->{_accessors}{$method} ||= $self->_accessor($method);
-      return $a->{$method};
+      $self->_update({ $name => shift }) if @_;
+      my $a = $self->{_accessors}{$name} ||= $self->_accessor($name, $type);
+      return $a->{$name};
    };
    
-   my @attrs = (grep $_ eq $method, @{$class->PROTECTED}) ? () : ('Macro');
-   WebTek::Util::make_method($class, $method, $sub, @attrs);
+   my @attrs = (grep $_ eq $name, @{$class->PROTECTED}) ? () : ('Macro');
+   WebTek::Util::make_method($class, $name, $sub, @attrs);
 }
 
 #... serialize from strings to WebTek::Data objects
@@ -442,20 +442,19 @@ sub _serialize {
    return $value unless $value or $type eq DATA_TYPE_STRING;
    return ($value ? 1 : 0) if $type eq DATA_TYPE_BOOLEAN;
    return ($value ? 0+$value : $value) if $type eq DATA_TYPE_NUMBER;
-   return struct($value) if $type eq DATA_TYPE_JSON;
-   return struct($value, 'perl') if $type eq DATA_TYPE_PERL;
-   my $timezone = $self->_db->config->{timezone}
+   return _struct($value) if $type eq DATA_TYPE_JSON;
+   return _struct($value, 'perl') if $type eq DATA_TYPE_PERL;
+   my $timezone = $self->_db->config->{timezone};
    return _date($value, $timezone) if $type eq DATA_TYPE_DATE;
-   throw "cannot access '$name', unknown data-type '$type'";
+   throw "cannot access '$value', unknown data-type '$type'";
 }
 
 sub _accessor {
-   my ($self, $name) = @_;
+   my ($self, $name, $type) = @_;
  
-   my $type = $self->_columns->{$name}{'webtek_data_type'};
    my $is_modified = exists $self->{_modified}{$name};
    my $store = $is_modified ? $self->{_modified} : $self->{_content};
-   $store->{$name} = _serialize($store->{$name}, $type);
+   $store->{$name} = $self->_serialize($store->{$name}, $type);
    return $store;
 }
 
@@ -470,7 +469,7 @@ sub _prepare_params {
          next if $ref eq 'ARRAY'; # type ARRAY understands the find fkt
          next unless blessed $ref;
          if ($value->can('to_db')) {
-            $params->{$key} = $value->to_db($class_or_self->_db);
+            $params->{$key} = $value->to_db($class->_db);
          } elsif ($value->can('id')) {
             $f_keys->{$key} = $value;
             $params->{"$key\_id"} = $value->id;
@@ -519,7 +518,7 @@ sub save {
    $self->is_valid('die');
    
    $self->_delete_from_cache;
-   my $modified = self->{_modified};
+   my $modified = $self->{_modified};
    my $table_name = $self->TABLE_NAME;
    my $op = $self->_in_db ? 'update' : 'insert';
    _event->trigger(obj => $class, name => "before-$op", args => [$self]);
@@ -530,7 +529,7 @@ sub save {
       my @pks = @{$self->_primary_keys};
       my $where = join ' and ', map "`$_` = ?", @pks;
       my @where_values = $self->_values_for_columns(\@pks);
-      my @set_columns = keys @{$self->_modified};
+      my @set_columns = keys %{$self->{_modified}};
       my @set_values = $self->_values_for_columns(\@set_columns, $modified);
       my $set = join ', ', map "`$_` = ?", @set_columns;
       my $sql = "update $table_name set $set where $where";
@@ -561,7 +560,7 @@ sub save {
    $self->$callback if $self->can($callback);
    $self->_set_to_cache;
 
-   _event->trigger(obj => $class name=> 'after-save', args => [ $self ]);
+   _event->trigger(obj => $class, name => 'after-save', args => [ $self ]);
    $self->after_save if $self->can('after_save');
 }
 
@@ -603,7 +602,7 @@ sub _set_to_cache {
    }
 }
 
-sub cache_key {
+sub _cache_key {
    my ($class, %params) = @_;
    my $real = $class->_real;
    
@@ -693,7 +692,7 @@ sub _check {
    my $self = shift;
    my $class = ref $self;
    
-   _event->trigger(obj => $class, method => 'before-check', args => [ $self ]);
+   _event->trigger(obj => $class, name => 'before-check', args => [ $self ]);
    $self->before_check if $self->can("before_check");
    
    #... is content already checked?
@@ -747,7 +746,7 @@ sub _check {
    #... add model-name to the keys
    $self->_set_errors($errors);
 
-   _event->trigger(obj => $class, method => 'after-check', args => [ $self ]);
+   _event->trigger(obj => $class, name => 'after-check', args => [ $self ]);
    $self->after_check if $self->can('after_check');
 }
 

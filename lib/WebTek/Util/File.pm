@@ -45,14 +45,13 @@ sub find {
    
    my ($name, $dir) = ($params{name}, $params{dir});
    assert -d $dir, 'find: no dir defined or exists';
-   $name =~ s/\*/\.*/g;
    $name =~ s/\./\\./g;
+   $name =~ s/\*/\.*/g;
       
    sub aux {
       my $path = shift;
       
       if (-f $path) {
-         $path = substr $path, rindex('/');
          return $path =~ /^$name$/ ? ($path) : ();
       } elsif (-d $path) {
          opendir my ($handle), $path or die "Error in opening dir '$path': $!";

@@ -91,7 +91,7 @@ sub create_new_for_ip {
       id => $id,
       data => {},
       ip_address => $ip_address,
-      create_time => date(now),
+      create_time => date('now'),
    );
 }
 

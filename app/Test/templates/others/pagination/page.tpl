@@ -1,1 +1,4 @@
-<a href="<% param.href %>?page=<% param.page %>"><% param.page %></a>
+<% link
+   href="<% href %>?page=<% param.page %>"
+   display="<% param.page %>"
+%>

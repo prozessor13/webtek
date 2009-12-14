@@ -42,7 +42,7 @@ sub init {
    assert -d $params{dir}, "app dir '$params{dir}' does not exist";
    
    #... create app
-   my $self = bless {}, $class;
+   my $self = $Apps{$params{name}} = bless {}, $class;
    $params{dir} =~ s|/$||g;           # trailing / makes bad things happen
    $self->name($params{name});
    $self->dir($params{dir});
@@ -54,7 +54,7 @@ sub init {
    $self->engine($params{engine});
    
    #... set global accessable
-   $self->activate($Apps{$params{name}} = $self);
+   $self->activate($params{name});
    
    #... init backend for app
    WebTek::Loader->init($params{loader});

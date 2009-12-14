@@ -9,7 +9,7 @@ use WebTek::Logger qw( log_debug log_fatal );
 
 our %Event;
 
-sub _init { $Event{$::appname} ||= bless {} shift }
+sub _init { $Event{$::appname} ||= bless {}, shift }
 
 sub event { $Event{$::appname} }
 

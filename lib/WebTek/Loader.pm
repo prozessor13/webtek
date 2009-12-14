@@ -23,24 +23,10 @@ sub reset { $Files{app->name} = {} }
 sub init {
    my ($class, $safe) = @_;    # may init modules safe (no die on error)	
 
-   #... register code-reload event
-   event->observe(
-      'name' => 'request-begin',
-      'priority' => 1,
-      'method' => sub {
-         WebTek::Util::stash({});
-         if (config->{'code-reload'}) {
-            timer_start('reload code');
-            reload();
-            timer_end('reload code');
-         }
-      },
-   );
-
    #... replace require to load WebTek Modules correctly
    *CORE::GLOBAL::require = sub {
       my $package = shift;
-      my $prefix = app->class_prefix;
+      my $prefix = app->prefix;
       my ($pkg, $ret) = ($package, undef);
       if ($pkg =~ /^$prefix/) {
          $pkg =~ s/\//::/g;
@@ -62,12 +48,26 @@ sub init {
    WebTek::DB->_init;
    WebTek::Page->_init;
 
-   my $session_class = config->{'session'}->{'class'};
+   my $session_class = config->{session}->{class};
    load($class, $session_class);
    $session_class->_init;
 
    load_perl_modules($files, $safe);
    merge_static_files($files, $safe);
+
+   #... register code-reload event
+   event->observe(
+      name => 'request-begin',
+      priority => 1,
+      method => sub {
+         WebTek::Util::stash({});
+         if (config->{code_reload}) {
+            timer_start('reload code');
+            reload();
+            timer_end('reload code');
+         }
+      },
+   );
 }
 
 sub reload {
@@ -81,7 +81,7 @@ sub reload {
 }
 
 sub files {
-   my $ignore = config->{'file-ignore-pattern'};
+   my $ignore = config->{file_ignore_pattern};
    my $files = $Files{app->name} ||= {};
    
    sub _files {
@@ -147,7 +147,7 @@ sub load_perl_modules {
          my $module = $1;
          $module =~ s|/|::|g;
          #... (safe) load module
-         eval { WebTek::Module->load(app->class_prefix . '::' . $module) }
+         eval { WebTek::Module->load(app->prefix . '::' . $module) }
          or do { $safe ? log_debug($@) : log_fatal($@) }
       }
    }
@@ -156,11 +156,11 @@ sub load_perl_modules {
 sub merge_static_files {
    my ($files, $safe) = @_;
    #... check if there is something to do
-   my $c = config->{'static'};
-   return if exists $c->{'merge'} and not $c->{'merge'};
+   my $c = config->{static};
+   return if exists $c->{merge} and not $c->{merge};
    #... merge changed static files
    my %loaded;
-   my ($static, $f) = ($c->{'dir'}, $Files{app->name});
+   my ($static, $f) = ($c->{dir}, $Files{app->name});
    foreach my $dir (grep -d, map "$_/static", @{app->dirs}) {
       foreach my $file (@$files) {
          next unless $file =~ /^$dir\/(.+)$/;

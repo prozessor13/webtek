@@ -81,7 +81,7 @@ sub console :Info(console -> starts the webtek console) {
    WebTek::Loader->reset;
    WebTek::Loader->reload('safe');
 
-   print 'Welcome to the WebTek Console\n\n';
+   print "Welcome to the WebTek Console\n\n";
    while (1) {
       print '> ';
       my $cmd = <STDIN>;
@@ -90,7 +90,7 @@ sub console :Info(console -> starts the webtek console) {
       WebTek::Loader->reload('safe') if config->{code_reload};
       my $output = eval "no strict; $cmd" || $@;
       print $output;
-      print "\n" unless $output =~ /\n$/;
+      print "\n" if $output and not $output =~ /\n$/;
    }
 }
 

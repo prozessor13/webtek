@@ -29,10 +29,11 @@ sub new {
 # ----------------------------------------------------------------------------
 
 sub can_handler {
-   my ($self, $name) = @_;
-   my $info = $self->_info('macro');
+   my ($self, $name, $ignore_custom) = @_;
    
-   return $self->_info('handler')->{$name};
+   my $code_handler = $self->_info('handler')->{$name};
+   return $code_handler if $ignore_custom;
+   return $code_handler || $self->{_handlers}{$name};
 }
 
 sub can_macro {
@@ -55,8 +56,10 @@ sub handler {
    my ($self, $name, @handler) = @_;
    
    if (@handler) {
-      assert !$self->can_handler($name), "$self: cannot set handler $name, " .
-         "because its already defined in code via the :Handler attribute";
+      assert(!$self->can_handler($name, "ignore_custom"),
+         "$self: cannot set handler $name, " .
+         "because its already defined in code via the :Handler attribute"
+      );
       $self->{_handlers}{$name} = $handler[0];
    }
    
@@ -76,10 +79,10 @@ sub render_string {
 
 sub _init {
    my $class = shift;
-   log_debug("$$: init handler $class");
+   WebTek::Logger::log_debug("$$: init handler $class");
 
    my ($h, $m, $f) = ({}, {}, {});
-   $self->_reset(undef, { handler => $h, macro => $m, filter => $f });
+   $class->_reset(undef, { handler => $h, macro => $m, filter => $f });
    
    #... extract code-attribute informations
    foreach (@{WebTek::Attributes->attributes_for_class($class)}) {
@@ -102,7 +105,7 @@ sub _init {
 
 sub _reset {
    my ($self, $type, $set) = @_;
-   my $class = ref $set || $self;
+   my $class = ref $self || $self;
    
    return $Info{$class}{$type} = $set if $type;
    return $Info{$class} = $set;
@@ -113,7 +116,7 @@ sub _info { $Info{ref $_[0] || $_[0]}{$_[1]} }
 sub _handler {
    my ($self, $name) = @_;
    
-   my $coderef = $self->can_handler($name);
+   my $coderef = $self->can_handler($name, "ignore_custom");
    return $coderef->($self) if $coderef;
    return $self->{_handlers}{$name} or throw "$self has no handler $name";
 }

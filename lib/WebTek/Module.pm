@@ -73,7 +73,7 @@ sub source_filter {
    my ($class, $source) = @_;
    
    #... replace constucts like use app->Model->X to use MyApp::Model::X
-   $source =~ s/(^|\W)app(\:\:[\w\:]+)/$1 . app->class_prefix . $2/emg;
+   $source =~ s/(^|\W)app(\:\:[\w\:]+)/$1 . app->prefix . $2/emg;
    #... replace sub($x) { ... } to sub { my ($self, $x) = @_; ... }
    $source =~ s/(^|[^\w'"\$\@\%])(class\s+)?method(\s+[^\W\d]\w*)?(\((.*?)\))?(.*?\{)/
       $2 ? "$1sub$3$6 my (\$class, $5) = \@_; \$class = ref \$class || \$class;"

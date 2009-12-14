@@ -175,8 +175,8 @@ sub schema {
 }
 
 sub primary_keys {
-   my ($self, $table) = @_;
-   my $t = uc($table) if $self->vendor eq DB_VENDOR_ORACLE;
+   my ($self, $t) = @_;
+   $t = uc($t) if $self->vendor eq DB_VENDOR_ORACLE;
    
    my @keys = ($self->vendor eq DB_VENDOR_MYSQL)
       ? map $_->{name}, grep $_->{mysql_is_pri_key}, @{$self->column_info($t)}

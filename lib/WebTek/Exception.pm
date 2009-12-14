@@ -12,7 +12,7 @@ package WebTek::Exception;
 
 use overload '""' => \&to_string;
 
-sub import { *{caller . '::throw'} = \&{'WebTek::Exception::throw2'} }
+sub import { *{caller() . '::throw'} = \&{'WebTek::Exception::throw2'} }
 
 sub create {
    my ($class, $msg, %params) = @_;

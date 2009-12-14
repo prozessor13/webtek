@@ -15,7 +15,7 @@ sub foreach_macro :Macro
       !$self->can_handler($params{'iterator'}),
       "there exists already a handler for this iterator-name '" .
          $params{'iterator'} . "', please choose another iterator-name"
-   );
+   ) if $params{'iterator'};
    assert(
       ($params{'do'} or $params{'template'}),
       "no template or do-block defined!"

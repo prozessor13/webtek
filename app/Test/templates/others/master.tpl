@@ -1,7 +1,7 @@
 <html>
 <head>
    <title><% response.title %></title>
-   <script src="<% static %>/prototype.js" type="text/javascript"></script>
+   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js" type="text/javascript"></script>
    <script src="<% static %>/webtek.js" type="text/javascript"></script>
    <link rel="stylesheet" type="text/css" href="<% static %>/webtek.css">
 </head>

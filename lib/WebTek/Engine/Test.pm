@@ -50,8 +50,13 @@ sub finalize { }
 
 sub log {
    my ($class, $level, $msg) = @_;
-   
-   $level = (qw( debug info warning error fatal ))[$level];
+
+   #... FIXME! use this format
+   # my $time = time2str("%Y-%m-%d %H:%M:%S", time);
+   # $level = (qw( xxx debug info warning error fatal ))[$level];
+   # warn "[$level] $msg\n";
+
+   $level = (qw( xxx debug info warning error fatal ))[$level];
    warn "[$level] $msg\n";
 }
 

@@ -18,7 +18,7 @@ use Apache2::Request;
 use Apache2::Upload;
 use Encode qw( _utf8_on decode encode );
 
-my @LogLevels = qw( debug info warn error crit );
+my @LogLevels = qw( xxx debug info warn error crit );
 
 sub prepare {
    my $self = shift;

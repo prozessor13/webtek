@@ -5,47 +5,47 @@ use WebTek::Globals;
 use WebTek::Util::Script;
 binmode STDOUT, 'utf8';
 
-my $pre_modules = "";   # comma-separated list of pre-modules (optional)
-my $post_modules = "";  # comma-separated list of post-modules (optional)
+my $libraries = '';  # comma separated list
+my $modules = '';    # comma separated list
 
 %::args = parse_argv();
-@::argv = @{$args{'argv'}};
+@::argv = @{$args{argv}};
 my $cmd = shift @argv;
 
-my $webtekdir = "/Users/max/Projects/WebTek2";
-my $appname = $args{'name'} || 'Test';
-my $appdir = $args{'dir'} || '/Users/max/Projects/WebTek2/app/Test';
-my $module = "/post-modules/$args{'post-module'}" if $args{'post-module'};
-$module = "/pre-modules/$args{'pre-module'}" if $args{'pre-module'};
+my $webtekdir = '/Users/max/Projects/WebTek2';
+my $appname = $args{name} || 'Test';
+my $appdir = $args{dir} || '/Users/max/Projects/WebTek2/app/Test';
+my $module = "/libraries/$args{library}" if $args{library};
+$module = "/pre-modules/$args{module}" if $args{module};
 
-assert -d "$appdir$module", "Defined Module does not exist!";
+assert -d "$appdir$module", 'Defined Module does not exist';
 
 #... create log-level from string debug,info,warning,error,fatal
-my $log_level ||= $params{'log_level'} || $args{'log_level'} || 'info';
-$log_level = eval "WebTek::Logger::LOG_LEVEL_" . uc($log_level) . "()";
+my $log_level ||= $params{log_level} || $args{log_level} || 'info';
+$log_level = eval 'WebTek::Logger::LOG_LEVEL_' . uc($log_level) . '()';
 
 #... init webtek-app
 WebTek::App->init(
-   'name' => $args{'name'} || $appname,
-   'dir' => $args{'dir'} || $appdir,
-   'env' => [ split ",", $args{'env'} ],
-   'log_level' => $log_level,
-   'pre-modules' => [ split ",", ($args{'pre-modules'} || $pre_modules) ],
-   'post-modules' => [ split ",", ($args{'post-modules'} || @post_modules) ],
-   'loader' => 'safe',
+   name => $args{name} || $appname,
+   dir => $args{dir} || $appdir,
+   env => [ split ',', $args{env} ],
+   log_level => $log_level,
+   libraries => [ split ",", ($args{'libraries'} || $libraries) ],
+   modules => [ split ",", ($args{'modules'} || $modules) ],
+   loader => 'safe',
 );
 
 #... exec command
 if ($cmd) {
    $cmd =~ s/-/_/g;
    eval {
-      assert WebTek::Util::Script->can($cmd), "invalid command!";
+      assert WebTek::Util::Script->can($cmd), 'invalid command';
       &{'WebTek::Util::Script::' . lc($cmd)}(
          $webtekdir, $appname, $appdir, $module, \%::args, \@::argv
       );
    };
    if ($@) {
-      my $msg = ref $@ && $@->isa('WebTek::Exception') ? $@->{'msg'} : $@;
+      my $msg = ref $@ && $@->isa('WebTek::Exception') ? $@->{msg} : $@;
       print "[ERROR]: $msg\n";
    }
 } else {
@@ -55,12 +55,12 @@ if ($cmd) {
 
 # parse cmd line arguments
 sub parse_argv {
-   my %args = ( 'argv' => [] );
+   my %args = ( argv => [] );
    for (my $i=0; $i<@ARGV; $i++) {
       if ($ARGV[$i] =~ /--(.*)/) {
          $args{$1} = $ARGV[++$i];
       } else {
-         push @{$args{'argv'}}, $ARGV[$i];
+         push @{$args{argv}}, $ARGV[$i];
       }
    }
    return %args;

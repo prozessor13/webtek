@@ -41,7 +41,7 @@ sub log {
       app->engine->log($level, $msg);
    } else {
       my $time = time2str("%Y-%m-%d %H:%M:%S", time);
-      $level = (qw( debug info warning error fatal ))[$level];
+      $level = (qw( xxx debug info warning error fatal ))[$level];
       print $FH "[$time] [$level]: $msg\n";
    }
 }

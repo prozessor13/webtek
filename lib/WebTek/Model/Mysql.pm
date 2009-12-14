@@ -10,8 +10,9 @@ use base qw( WebTek::Model );
 
 sub _columns {
    my $class = shift;
-   my $columns = shift; # arrayref with all column-info
+   return $class->SUPER::_columns unless @_;
    
+   my $columns = shift;
    foreach my $column (@$columns) {
       my $type = $column->{type};
       my $name = $column->{name};
@@ -33,7 +34,7 @@ sub _columns {
          $column->{webtek_data_type} = $class->DATA_TYPE_UNKNOWN;
       }
    }
-   $class->SUPER::_columns($columns);
+   return $class->SUPER::_columns($columns);
 }
 
 sub _do_action {
