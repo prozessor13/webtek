@@ -134,7 +134,7 @@ sub translate :Info(translate <language>,... -> generate .po files) {
                my $src = @{$key->[1]} ? '#: '.join(',',@{$key->[1]})."\n" : '';
                $content .= "$src\msgid \"$key->[0]\"\nmsgstr \"\"\n\n";
             }
-            WebTek::Util::write($file, $content);
+            WebTek::Util::File::write($file, $content);
          }
       }
    }
@@ -189,13 +189,13 @@ sub migrate
    #... manage the history-file
    my $history = sub {
       my @h = -f '.migration.history'
-         ? split "\n", slurp('.migration.history')
+         ? sort split "\n", slurp('.migration.history')
          : ();
       if (@_) {
          my $name = shift;
          my $time = date('now')->to_string(format => '%Y-%m-%d %H:%M:%S');
          push @h, "$time\t$name\t$cmd";
-         WebTek::Util::write('.migration.history', join "\n", @h);
+         WebTek::Util::File::write('.migration.history', join "\n", @h);
       }
       return @h;
    };
@@ -205,7 +205,7 @@ sub migrate
          /((pre|post)-modules\/(\w+))?\/scripts\/migrate\/(\d+_\w+.pl)$/
             ? $3 ? "$4\@$2:$3" : $4 : ''
       } map {
-         WebTek::Util::find(dir => $_, name => '*.pl');
+         WebTek::Util::File::find(dir => $_, name => '*.pl');
       } grep -d $_, map { "$_/scripts/migrate" } @{app->dirs};
    };
    
@@ -257,7 +257,8 @@ sub migrate
    } elsif ($cmd eq 'list') {
       foreach my $name ($list->()) {
          if ($name =~ /^\d+_(\w+).pl(@\w+:\w+)?$/) {
-            print " * $1$2 ".($alreay_done->($name)?"(already done)\n":"\n");            
+            my $done = $alreay_done->($name) ? '[done]' : '      ';
+            print " * $done $1$2 \n";
          }
       }
    } elsif ($cmd eq 'history') {

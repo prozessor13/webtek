@@ -21,8 +21,10 @@ sub date {
    my $date = shift;       # date or time
    my $timezone = shift;   # optional timezone
    
+   return $date if ref $date eq __PACKAGE__;
+   
    $timezone ||= eval { WebTek::Request::request()->timezone };
-   $timezone ||= config->{'default-timezone'} || 'GMT';
+   $timezone ||= config->{default_timezone} || 'GMT';
 
    my $time = $date =~ /^\d+$/
       ? $date
@@ -30,35 +32,35 @@ sub date {
    __PACKAGE__->new($time, $timezone);
 }
 
-sub new { bless { 'time' => $_[1], 'timezone' => $_[2] }, $_[0] }
+sub new { bless { time => $_[1], timezone => $_[2] }, $_[0] }
 
-sub to_time { $_[0]->{'time'} }
+sub to_time { $_[0]->{time} }
 
-sub to_number { 0 + $_[0]->{'time'} }
+sub to_number { 0 + $_[0]->{time} }
 
 sub to_string {
    my ($self, %params) = @_;
 
    return undef unless $self->is_valid;
-   $params{'format'} ||= "%d.%m.%Y %H:%M";
-   $params{'timezone'} ||= $self->timezone;
-   return time2str($params{'format'}, $self->to_time, $params{'timezone'});
+   $params{format} ||= "%d.%m.%Y %H:%M";
+   $params{timezone} ||= $self->timezone;
+   return time2str($params{format}, $self->to_time, $params{timezone});
 }
 
 sub to_db {
    my ($self, $db) = @_; # $db isa WebTek::DB object
 
    return $self->to_string(
-      'format' => $db->config->{'date-format'},
-      'timezone' => $db->config->{'timezone'},
+      'format' => $db->config->{date_format},
+      'timezone' => $db->config->{timezone},
    );
 }
 
-sub to_rfc_822 { shift->to_string('format' => '%a, %d %b %Y %H:%M:%S %z') }
+sub to_rfc_822 { $_[0]->to_string(format => '%a, %d %b %Y %H:%M:%S %z') }
 
-sub timezone { shift->{'timezone'} }
+sub timezone { $_[0]->{timezone} }
 
-sub is_valid { defined shift->{'time'} }
+sub is_valid { defined $_[0]->{time} }
 
 sub cmp_time {
    my ($self, $other) = @_;

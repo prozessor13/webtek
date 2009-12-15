@@ -100,7 +100,8 @@ sub has_a {
    
    #... extend class
    $Has_a{$::appname}{$class}{$column} = [$accessor, $model, $constructor];
-   $class->make_has_a_method($accessor, $column);   
+   my ($type) = grep $column eq $_->{name}, @{$class->_columns};
+   $class->_make_accessor($accessor, $type);
 }
 
 # --------------------------------------------------------------------------
@@ -365,16 +366,16 @@ sub _update {
    #... update foreign keys
    foreach my $f_key (@{$self->_foreign_keys}) {
       my ($column, $accessor, $model, $constructor) = @$f_key;
-      if (exists $params->{$column}) {
+      if (exists $params->{$accessor}) {
+         my $obj = $params->{$accessor};
+         $modified{$column} = $obj && $obj->id;
+         $modified{$accessor} = $obj;
+         delete $params->{$column};
+         delete $params->{$accessor};
+      } elsif (exists $params->{$column}) {
          my $id = $params->{$column};
          $modified{$column} = $id;
          $modified{$accessor} = $id && $model->$constructor(id => $id);
-         delete $params->{$column};
-         delete $params->{$accessor};
-      } elsif (exists $params->{$accessor}) {
-         my $obj = $params->{$column};
-         $modified{$column} = $obj && $obj->id;
-         $modified{$accessor} = $obj;
          delete $params->{$column};
          delete $params->{$accessor};
       }
@@ -387,7 +388,7 @@ sub _update {
 
    #... update obj state
    delete $self->{_accessors}{$_} foreach keys %modified;
-   $self->{_modified} = { %{$self->_modified}, %modified };
+   $self->{_modified}{$_} = $modified{$_} foreach keys %modified;
 }
 
 sub _fetch {
@@ -439,7 +440,7 @@ sub _serialize {
    my ($self, $value, $type) = @_;
    
    return $value if blessed $value;
-   return $value unless $value or $type eq DATA_TYPE_STRING;
+   return $value if not $value or $type eq DATA_TYPE_STRING;
    return ($value ? 1 : 0) if $type eq DATA_TYPE_BOOLEAN;
    return ($value ? 0+$value : $value) if $type eq DATA_TYPE_NUMBER;
    return _struct($value) if $type eq DATA_TYPE_JSON;
@@ -547,13 +548,14 @@ sub save {
       my @args = $self->_values_for_columns(\@columns, $modified);
       $self->_do_action($sql, @args);
       if ($self->can('id') and not defined $self->{_content}{id}) {
-         $self->{_content}{_id} = $self->_db->last_insert_id($table_name, 'id');
+         $self->{_modified}{id} = $self->_db->last_insert_id($table_name, 'id');
       }
       $self->_updated(\@columns);
    }
 
    $self->{_content}{$_} = $modified->{$_} foreach (keys %$modified);
    $self->{_modified} = {};
+   $self->{_accessors} = {};
    $self->_in_db(1);
    _event->trigger(obj => $class, name => "after-$op", args => [$self]);
    my $callback = "after_$op";
@@ -562,6 +564,7 @@ sub save {
 
    _event->trigger(obj => $class, name => 'after-save', args => [ $self ]);
    $self->after_save if $self->can('after_save');
+   return 1;
 }
 
 # --------------------------------------------------------------------------
@@ -702,7 +705,7 @@ sub _check {
    my $errors = {};
    my $modified = $self->{_modified};
    CHECK: foreach my $name (keys %$modified) {
-      my $column = $self->_columns->{$name};
+      my ($column) = grep $name eq $_->{name}, @{$self->_columns};
       my $value = $self->_value_for_column($name, $modified);
 
       #... dont check the id-field when model is not in db
@@ -758,11 +761,9 @@ sub to_hash {
    my $self = shift;
    
    my $hash = {};
-   foreach my $name (map $_->{name}, @{$self->columns}) {
+   foreach my $name (map $_->{name}, @{$self->_columns}) {
       next if grep { $name eq $_ } @{$self->PROTECTED};
-      my $value = $self->_value_for_column($name, $self->{_modified});
-      $hash->{$name} = Encode::encode_utf8($value);
-      Encode::_utf8_on($hash->{$name});
+      $hash->{$name} = $self->_value_for_column($name, $self->{_modified});
    }
    return $hash;
 }

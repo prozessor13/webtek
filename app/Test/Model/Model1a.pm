@@ -1,0 +1,1 @@
+use base qw( app::Model::Model1 );
