@@ -71,7 +71,7 @@ sub cleanup {
    log_debug 'WebTek::Session: do a cleanup in DB';
    my $expiry_time = config->{session}{expiry_time};
    my $invalid_time = date(time - $expiry_time)->to_db($class->_db);
-   my $sessions = $class->where("create_time < '$invalid_time'");
+   my $sessions = $class->find(where => "create_time < '$invalid_time'");
    foreach my $session (@$sessions) { $session->delete }
    $LastCleanup->{app->name} = time;
 }

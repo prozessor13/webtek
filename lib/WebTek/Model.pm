@@ -447,6 +447,7 @@ sub _serialize {
    return _struct($value, 'perl') if $type eq DATA_TYPE_PERL;
    my $timezone = $self->_db->config->{timezone};
    return _date($value, $timezone) if $type eq DATA_TYPE_DATE;
+   return $value if $type eq DATA_TYPE_BLOB;
    throw "cannot access '$value', unknown data-type '$type'";
 }
 

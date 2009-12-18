@@ -37,7 +37,7 @@ sub trigger {
 
    my ($name, $args, @return) = ($params{name}, $params{args} || []);
    foreach my $e (@{$self->{$name}{list} || []}) {
-      my ($obj, $method, $args) = @$e;
+      my ($obj, $method) = @$e;
       if (not $params{obj} or _eq($params{obj}, $obj)) {
          eval { push @return, $obj->$method(@$args); 1 }
             or log_fatal "error executing event '$name' on object $obj: $@";
