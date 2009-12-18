@@ -114,6 +114,6 @@ sub DUMPER { shift->get(@_) }
 
 sub to_db { shift->to_perl(@_) }
 
-sub to_string { shift->to_json(@_) }
+sub to_string { shift->to_perl(@_) }
 
 1;

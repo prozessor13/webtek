@@ -123,7 +123,7 @@ sub vendor {
 sub do_action {
    my ($self, $sql, @args) = @_;
    
-   log_info('[SQL] $sql with args ("' . join('","', @args) . '")')
+   log_info("[SQL] $sql with args ('" . join("','", @args) . "')")
       if config->{log_sql};
    my $dbh = $self->dbh;
    my $sth = $dbh->prepare($sql)

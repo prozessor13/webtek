@@ -468,7 +468,7 @@ sub _prepare_params {
       #... translate objects to db-columns
       if (my $ref = ref $value) {
          next if $ref eq 'ARRAY'; # type ARRAY understands the find fkt
-         next unless blessed $ref;
+         next unless blessed $value;
          if ($value->can('to_db')) {
             $params->{$key} = $value->to_db($class->_db);
          } elsif ($value->can('id')) {
@@ -772,7 +772,7 @@ sub to_string {
    my $self = shift;
    
    my $hash = $self->to_hash;
-   my $table_name = $self->table_name;
+   my $table_name = $self->TABLE_NAME;
    my $values = join "\n", map "   $_: $hash->{$_}", keys %$hash;   
    return "$table_name:\n$values";
 }
@@ -782,9 +782,10 @@ sub describe {
    
    my $table_name = $class->TABLE_NAME;
    my $primary_keys = join ", ", @{$class->_primary_keys};
-   my $desc = "describe $table_name:\n  primary-key: $primary_keys\n";
-   foreach my $column (@{$class->columns}) {
-      $desc .= join "\n", map "   $_: $column->{$_}", keys %$column;
+   my $desc = "describe $table_name:\n  primary-key(s): $primary_keys";
+   foreach my $column (@{$class->_columns}) {
+      $desc .= "\n  column '$column->{name}':\n";
+      $desc .= join "\n", map "    $_: $column->{$_}", keys %$column;
    }
    return $desc;
 }
