@@ -16,8 +16,8 @@ sub handler : method {
       'name' => $r->dir_config('name'),
       'dir' => $r->dir_config('dir'),
       'env' => [ split ",", $r->dir_config('env') ],
-      'pre-modules' => [ split ",", $r->dir_config('pre-modules') ],
-      'post-modules' => [ split ",", $r->dir_config('post-modules') ],
+      'libraries' => [ split ",", $r->dir_config('libraries') ],
+      'modules' => [ split ",", $r->dir_config('modules') ],
       'engine' => 'WebTek::Engine::ModPerl2',
    );
    

@@ -165,7 +165,7 @@ sub _init {
       #... set model info
       $class->_columns($real->_columns);
       $class->_primary_keys($real->_primary_keys);
-      $class->has_a(@$_[1,2,3]) foreach @{$real->foreign_keys};
+      $class->has_a(@$_[1,2,3]) foreach @{$real->_foreign_keys};
       WebTek::Util::may_make_method($class, '_class', sub { $class });
       return;
    }

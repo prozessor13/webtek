@@ -6,6 +6,8 @@ package WebTek::Export;
 # export functions in caller (like Exporter.pm, only much simpler)
 
 use WebTek::Exception;
+require WebTek::Attributes;
+
 our $Exports = {};
 
 sub import {
@@ -37,8 +39,11 @@ sub import {
             "cannot export $from\::$e to $to\::$export{$e}, " .
             "because $from\::$e is not defined!"
          unless defined &{"$from\::$e"};
-         $export{$e} ||= $e;
-         *{"$to\::$export{$e}"} = \&{"$from\::$e"}
+         #... export method and may init method (do something with attributes)
+         my ($name, $coderef) = ($export{$e} || $e, \&{"$from\::$e"});
+         *{"$to\::$name"} = $coderef;
+         my $attr = WebTek::Attributes->get($coderef) or next;
+         WebTek::Attributes::MODIFY_CODE_ATTRIBUTES($to, $coderef, @$attr);
       }
    };
    

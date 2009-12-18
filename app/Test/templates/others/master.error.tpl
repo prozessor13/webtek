@@ -4,6 +4,6 @@
       <style>body { color: red }</style>
    </head>
    <body>
-      <% response.message %>
+      <% response.status %>: <% response.message %>
    </body>
 </html>

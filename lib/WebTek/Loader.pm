@@ -43,10 +43,13 @@ sub init {
    load_configs($files, $safe);
    load_messages($files, $safe);
 
+   WebTek::App->_init;
    WebTek::Event->_init;
    WebTek::Timing->_init;
    WebTek::DB->_init;
    WebTek::Page->_init;
+   WebTek::Request->_init;
+   WebTek::Response->_init;
 
    my $session_class = config->{session}->{class};
    load($class, $session_class);

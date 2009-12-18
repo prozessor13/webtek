@@ -93,11 +93,14 @@ sub _init {
       #... process macros
       if (grep { /^Macro/ } @$attributes) {
          WebTek::Macro->init($name, $coderef);
+         $name = $name =~ /^(\w+)_macro$/ ? $1 : $name;
          $m->{$name} = $coderef;
       #... process handler
       } elsif (grep { /^Handler/ } @$attributes) {
+         $name = $name =~ /^(\w+)_handler$/ ? $1 : $name;
          $h->{$name} = $coderef;
       } elsif (grep { /^Filter/ } @$attributes) {
+         $name = $name =~ /^(\w+)_filter$/ ? $1 : $name;
          $f->{$name} = $coderef;
       }
    }
@@ -107,11 +110,11 @@ sub _reset {
    my ($self, $type, $set) = @_;
    my $class = ref $self || $self;
    
-   return $Info{$class}{$type} = $set if $type;
-   return $Info{$class} = $set;
+   return $Info{$::appname}{$class}{$type} = $set if $type;
+   return $Info{$::appname}{$class} = $set;
 }
 
-sub _info { $Info{ref $_[0] || $_[0]}{$_[1]} }
+sub _info { $Info{$::appname}{ref $_[0] || $_[0]}{$_[1]} }
 
 sub _handler {
    my ($self, $name) = @_;

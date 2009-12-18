@@ -59,7 +59,6 @@ sub import {
       WebTek::Data::Date::date date
       WebTek::Cache::cache cache
       WebTek::Exception::throw2 throw
-      WebTek::Util::comet_event comet_event
       WebTek::Model::DATA_TYPE_UNKNOWN DATA_TYPE_UNKNOWN
       WebTek::Model::DATA_TYPE_STRING DATA_TYPE_STRING
       WebTek::Model::DATA_TYPE_NUMBER DATA_TYPE_NUMBER
@@ -74,8 +73,12 @@ sub import {
 sub export {
    my $caller = caller(1);
    my %exports = @_;
-   while (my ($sub, $method) = each %exports) {
-      *{"$caller\::$method"} = \&{$sub} unless defined &{"$caller\::$method"};
+   while (my ($sub, $name) = each %exports) {
+      next if defined &{"$caller\::$name"};
+      my $coderef = \&{$sub};
+      *{"$caller\::$name"} = $coderef;
+      my $attr = WebTek::Attributes->get($coderef) or next;
+      WebTek::Attributes::MODIFY_CODE_ATTRIBUTES($caller, $coderef, @$attr);
    }
 }
 
