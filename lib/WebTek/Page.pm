@@ -371,9 +371,9 @@ sub child_paths {
    return $class->_reset('child_path', \@paths);
 }
 
-sub can_action { shift->_info('action')->{shift} };
+sub can_action { $_[0]->_info('action')->{$_[1]} };
 
-sub can_rest { shift->_info('rest')->{shift} };
+sub can_rest { $_[0]->_info('rest')->{$_[1]} };
           
 # ---------------------------------------------------------------------------
 # macros
