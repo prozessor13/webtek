@@ -1,4 +1,5 @@
 function setMessage(msg, id) {
+   id = "#" + (id || 'message');
    msg ? jQuery(id).show() : jQuery(id).hide();
    jQuery(id).html(msg);
 }

@@ -1,13 +1,7 @@
 package WebTek::Handler;
 
-sub static :Macro
-   :Param(render the src to a static file)
-   :Param(filename="filename.ext" relative filename (from the static dir))
-{
-   my ($self, %params) = @_;
-   
-   my $fname = $params{'filename'} ? "/$params{'filename'}" : "";
-   return config->{'static'}->{'href'} . $fname ;
-}
+use WebTek::Config qw( config );
+
+sub static :Macro { config->{static}{href} }
 
 1;
