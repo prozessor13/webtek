@@ -9,7 +9,7 @@ sub form_ajax :Macro
    my ($self, %params) = @_;
 
    #... remember the form errors
-   $self->{'__form_errors'} = $self->_suppress_errors ? undef : [];
+   $self->{'__form_errors'} = [];
    
    #... create action href
    my $action = $params{'action'}

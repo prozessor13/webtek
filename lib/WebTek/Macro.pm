@@ -27,7 +27,7 @@ sub load {
          }
       }
    }
-   throw "WebTek::Macro::$name not found!";
+   return undef;
 }
 
 sub init {

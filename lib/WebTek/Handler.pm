@@ -41,7 +41,7 @@ sub can_macro {
    my $info = $self->_info('macro');
    
    return $info->{$name} if exists $info->{$name};
-   return $info->{$name} = eval { WebTek::Macro->load($name) };
+   return $info->{$name} = WebTek::Macro->load($name);
 }
 
 sub can_filter {

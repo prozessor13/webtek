@@ -27,6 +27,7 @@ make_accessor 'action', 'Macro';
 make_accessor 'method', 'Macro';	      # e.g. "POST"
 make_accessor 'language', 'Macro';
 make_accessor 'is_ajax', 'Macro';
+make_accessor 'is_rest', 'Macro';
 make_accessor 'user_agent', 'Macro';
 make_accessor 'referer', 'Macro';
 make_accessor 'country', 'Macro';
@@ -91,6 +92,7 @@ sub params :Handler {
    if (@_) {
       #... set params
       my $params = shift;
+      $self->method(delete $params->{_method}) if $params->{_method};
       WebTek::Request::Param->_new($params);
       $self->param(WebTek::Request::Param->_new($params));
       #... group params

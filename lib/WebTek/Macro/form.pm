@@ -1,24 +1,30 @@
+package WebTek::Page;
+
+use strict;
+
+
 sub form :Macro
    :Param(render a form tag)
-   :Param(action="action" optional, default action = response->action)
-   :Param(method="post" optional, default = post)
+   :Param(action="action" optional, default=response->action)
+   :Param(method="post" optional, default=post)
    :Param(all other params are forwarded into the form tag)
 {
-   my ($self, %params) = @_;
+   my ($self, %p) = @_;
    
    #... remember the form errors
-   $self->{'__form_errors'} = $self->_suppress_errors ? undef : [];
+   $self->{'__form_errors'} = [];
+   #... process form action
+   $p{action} = $p{action}
+      ? $p{action} =~ /^\// ? $p{action} : $self->href(action => $p{action})
+      : response->action || request->is_rest
+         ? $self->href : $self->href(action => request->action);
+   #... process form method
+   my $method = input_tag({
+      type => 'hidden', name => '_method', value => $p{method} || 'post',
+   });
+   $p{method} = $p{method} =~ /^get|post$/i ? $p{method}: 'post';
    
-   if ($params{'action'}) {
-      $params{'action'} = $params{'action'} =~ /^\//
-         ? $params{'action'}                             # absolute href
-         : $self->href('action' => $params{'action'});   # relative href
-   } else {
-      $params{'action'} ||= response->action
-         || $self->href('action' => request->action);
-   }
-   
-   $params{'method'} ||= "post";
-      
-   return form_tag(\%params) . "<div>";
+   return form_tag(\%p) . $method . '<div>';
 }
+
+1;

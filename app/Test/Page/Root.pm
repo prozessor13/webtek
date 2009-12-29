@@ -2,6 +2,6 @@ use base qw( app::Page::Page );
 
 use WebTek::Macro qw( static );
 
-method index :Action {
+method get :Action :Rest {
    response->message('hallo');
 }

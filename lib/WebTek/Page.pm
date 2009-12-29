@@ -168,11 +168,12 @@ sub do_action {
    my ($self, $action) = @_;
    
    #... update action name in case of REST
-   my $is_rest = $action eq 'index' && $self->can_rest;
-   $action = $is_rest if $is_rest;
+   if ($action eq 'index' and my $m = lc request->method) {
+      $action = request->action($m) if request->is_rest($self->can_rest($m))
+   }
    
    #... handle session for normal http requests
-   unless ($is_rest) {
+   unless (request->is_rest) {
       my $session = config->{session}{class}->init;
       event->observe(
          name => 'request-finalize-end',   # is this dangerous?
@@ -188,7 +189,7 @@ sub do_action {
    eval {
       return $self->not_found unless $action and $self->can_action($action);
       return $self->access_denied unless $self->check_access(action => $action);
-      response->status(201) if $is_rest and request->is_post;
+      response->status(201) if request->is_rest and request->is_post;
       $self->$action;
    };
 
@@ -206,7 +207,7 @@ sub do_action {
             $self->has_errors(1);
             $self->_errors({%{$self->_errors}, %{$error->obj->_errors}});
             log_debug "$self: ObjInvalid Exception: " . $self->errors;
-            if (request->is_post and not $is_rest) {
+            if (request->is_post and not request->is_rest) {
                request->method('GET');
                $self->do_action($action);
             } else {
@@ -390,7 +391,7 @@ sub page_name :Macro
 sub check_access :Macro :Param(action="index" action name) {
    my ($self, %params) = @_;
    
-   assert $params{action}, "no action defined!";
+   assert $params{action}, 'no action defined';
    return 0 unless $self->can_action($params{action});
    my $check_access = $self->can("$params{action}\_check_access");
    return 1 unless $check_access;
