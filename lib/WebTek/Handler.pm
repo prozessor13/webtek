@@ -259,7 +259,6 @@ sub each_macro :Macro
    my ($self, %params) = @_;
    
    my $hash = delete $params{'hash'};
-   WebTek::Logger::log_info("hash: $hash");
    assert($hash, "no hash defined");
    assert(reftype $hash eq 'HASH', "list not type of HASH");
    

@@ -47,6 +47,7 @@ sub prepare {
        _utf8_on($location);
    }
    $path_info =~ s|$location||;
+   $path_info =~ s|/+$||;
    request->unparsed_uri(r->unparsed_uri);
    request->uri($uri);
    request->path_info($path_info);
