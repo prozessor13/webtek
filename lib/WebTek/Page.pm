@@ -64,7 +64,13 @@ sub new {
    my $self = $class->SUPER::new;
    $self->_errors({});
    if ($WebTek::Dispatcher::CurrentPage) {
-      $self->parent($WebTek::Dispatcher::CurrentPage);      
+      my $current = ref $WebTek::Dispatcher::CurrentPage;
+      foreach my $parent ($self->_parents) {
+         if ($parent eq $current) {
+            $self->parent($WebTek::Dispatcher::CurrentPage);
+            last;
+         }
+      }
    }
    event->notify("$class-created", $self);
    
@@ -398,8 +404,8 @@ sub _child_paths {
    #... sort paths
    #... paths starting with the most plain characters have the higest priority
    @paths = sort {
-       my $lenA = ($a->[2] =~ /^(\w+)/) ? length($1) : 0;
-       my $lenB = ($b->[2] =~ /^(\w+)/) ? length($1) : 0;
+       my $lenA = ($a->[2] =~ /^([\w-]+)/) ? length($1) : 0;
+       my $lenB = ($b->[2] =~ /^([\w-]+)/) ? length($1) : 0;
        return $lenB <=> $lenA;
    } @paths;
    #... remember and return child paths
