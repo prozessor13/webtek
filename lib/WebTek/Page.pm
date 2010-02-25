@@ -796,6 +796,8 @@ sub message :Macro
    :Param(language="en" optional overwrite of the request or session langauge)
 {
    my ($self, %params) = @_;
+   my $class = ref $self;
+   my $reload = config->{'code-reload'};
    
    #... find language for request
    $params{'language'} ||= session->language || request->language;
@@ -804,14 +806,15 @@ sub message :Macro
    return "" unless $k;
    my $key = WebTek::Cache::key($params{'language'}, $k);
    $key .= ",$params{'default'}" if defined $params{'default'};
-   my $compiled = $Messages{ref $self}{$key};
-   if (config->{'code-reload'} or not $compiled) {
-      my $message = WebTek::Message->message(%params);
-      $compiled = eval { WebTek::Compiler->compile($self, $message) };
-      log_fatal "error compiling message $params{'key'}, details $@" if $@;
+   my $compiled = $Messages{$class}{$key};
+   return if exists $Messages{$class}{$key} and not $compiled and not $reload;
+   if ($reload or not $compiled) {
+      my $msg = WebTek::Message->message(%params);
+      $compiled = $msg && eval { WebTek::Compiler->compile($self, $msg) };
+      log_fatal "error compiling message $k, details $@" if $msg and $@;
       $Messages{ref $self}{$key} = $compiled;
    }
-   return $compiled->($self, \%params);
+   return $compiled && $compiled->($self, \%params);
 }
 
 sub errors :Macro
