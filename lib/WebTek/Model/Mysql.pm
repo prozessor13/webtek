@@ -8,6 +8,8 @@ package WebTek::Model::Mysql;
 use strict;
 use base qw( WebTek::Model );
 
+sub _quote { '`' }
+
 sub _columns {
    my $class = shift;
    my $columns = shift; # arrayref with all column-info

@@ -778,6 +778,19 @@ sub select_from_list :Macro
    return $self->render_form_field(\%params);
 }
 
+sub render :Macro 
+   :Param(tempate="abc" name of the template (without .tpl))
+   :Param(string="abc<% param.x %>" render this string)
+{
+   my ($self, %params) = @_;
+   
+   assert($params{'template'} || $params{'string'},
+      "no templatename  or string defined");
+   return $params{'string'}
+      ? $self->render_string($params{'string'}, \%params)
+      : $self->render_template($params{'template'}, \%params);
+}
+
 sub template :Macro
    :Param(name="x" name of the template (without .tpl))
    :Param(all other params are forwarded to the template)

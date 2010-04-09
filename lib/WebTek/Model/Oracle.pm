@@ -10,6 +10,8 @@ use base qw( WebTek::Model );
 
 sub SEQUENCE { undef }
 
+sub _quote { '"' }
+
 sub _columns {
    my $class = shift;
    my $columns = shift; # arrayref with all column-info

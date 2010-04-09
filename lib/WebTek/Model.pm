@@ -397,17 +397,18 @@ sub find {
    # order conditions (and before or)
    @conditions = sort { $a->[1] <=> $b->[1] } @conditions;
    # create where clause
+   my $q = $class->_quote;
    my @args = ();
    my @where = ();
    foreach (@conditions) {
       my ($key, $com, $col, $match) = @$_;
       if (ref $params{$key} eq 'ARRAY') {
-         my $in = join " or ", map { "`$col` $match ?" } @{$params{$key}};
+         my $in = join " or ", map { "$q$col$q $match ?" } @{$params{$key}};
          push @args, @{$params{$key}};
          push @where, (@where ? "$com ( $in )" : "( $in )");
       } else {
          push @args, $params{$key};
-         push @where, (@where ? "$com `$col` $match ?" : "`$col` $match ?");
+         push @where, (@where?"$com $q$col$q $match ?":"$q$col$q $match ?");
       }
    }
    my $where = @where ? "where " . join(" ", @where) : "";
@@ -701,6 +702,7 @@ sub save {
    $self->throw_model_invalid_if_errors();
    
    $self->delete_from_cache;
+   my $q = $self->_quote;
    my $table_name = $self->TABLE_NAME;
    my $operation = $self->_in_db ? 'update' : 'insert';
    event->notify("$class-before-$operation", $self);
@@ -709,12 +711,12 @@ sub save {
    if ($operation eq 'update') {
       $self->before_update if $self->can("before_update");
       my @pks = @{$self->primary_keys};
-      my $where = join " and ", map { "`$_` = ?" } @pks;
+      my $where = join " and ", map { "$q$_$q = ?" } @pks;
       my @where_values =
          $self->_values_for_columns(\@pks, $self->_persistent_content);
       my @set_columns = @{$self->_lazy};
       my @set_values = $self->_values_for_columns(\@set_columns);
-      my $set = join ", ", map { "`$_` = ?" } @set_columns;
+      my $set = join ", ", map { "$q$_$q = ?" } @set_columns;
       my $sql = qq{ update $table_name set $set where $where };
       $self->_do_action($sql, @set_values, @where_values);
       $self->_updated(\@set_columns);
@@ -726,7 +728,7 @@ sub save {
          $self->{'content'}->{'id'} = $self->_get_next_id;
       }
       my @columns = map { $_->{'name'} } @{$self->columns};
-      my $keys = join(", ", map { "`$_`" } @columns);
+      my $keys = join(", ", map { "$q$_$q" } @columns);
       my $values = join(", ", map { '?' } @columns);
       my $sql = qq{ insert into $table_name ($keys) values ($values) };
       my @args = $self->_values_for_columns(\@columns);
@@ -1056,7 +1058,7 @@ sub to_hash {
       $hash->{$name} = encode_utf8(
          ref($content) =~ /^WebTek::Data/
             ? $content->to_db($self->_db)
-            : $content || ''
+            : defined $content ? $content : ''
       );
       _utf8_on($hash->{$name});
    }

@@ -5,7 +5,7 @@ package WebTek::Timing;
 # log timing-information
 
 use strict;
-use WebTek::Util qw( assert );
+use WebTek::Util qw( assert r );
 use WebTek::Logger qw( ALL );
 use WebTek::Config qw( config );
 use WebTek::Event qw( event );
@@ -19,11 +19,14 @@ our $Active;
 sub _init {
    event->register(
       'name' => 'request-begin',
-      'method' => sub { &init; timer_start('request') },
+      'method' => sub {
+         &init;
+         timer_start('request: ' . r->uri)
+      },
    );
    event->register(
       'name' => 'request-end',
-      'method' => sub { timer_end('request') },
+      'method' => sub { timer_end('request: ' . r->uri) },
    );
    event->register(
       'name' => 'request-init-begin',

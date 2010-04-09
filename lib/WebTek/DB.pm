@@ -17,23 +17,19 @@ use WebTek::Timing qw( ALL );
 use WebTek::Export qw( DB );
 require WebTek::Config;
 
-our %SharedInstance = ();
+our %DB = ();
 
 sub _init {
    event->register(
       'name' => 'request-end',
-      'method' => sub {
-         $_->commit foreach values %{$SharedInstance{app->name}};
-      },
+      'method' => 'commit_all',
       'priority' => 10,
    );
    event->register(
       'name' => 'request-had-errors',
-      'method' => sub{
-         $_->rollback foreach values %{$SharedInstance{app->name}};
-      },
+      'method' => 'rollback_all',
       'priority' => 10,
-   );   
+   );
 }
 
 # ----------------------------------------------------------------------------
@@ -52,7 +48,7 @@ sub DB_VENDOR_UNKNOWN { 'unknown' }
 
 sub DB {
    my $config = $_[0] || 'db';
-   $SharedInstance{app->name}->{$config} ||= WebTek::DB->new($config);
+   $DB{app->name}->{$config} ||= WebTek::DB->new($config);
 }
 
 sub new {
@@ -61,12 +57,12 @@ sub new {
 }
 
 sub DESTROY {
-   if ($SharedInstance{app->name}) {
-      foreach my $db (values %{$SharedInstance{app->name}}) {
+   if ($DB{app->name}) {
+      foreach my $db (values %{$DB{app->name}}) {
          if ($db->{'dbh'}) { $db->{'dbh'}->disconnect }
       }
    }
-   delete($SharedInstance{app->name});
+   delete($DB{app->name});
 }
 
 # ----------------------------------------------------------------------------
@@ -168,7 +164,11 @@ sub do_query {
 
 sub commit { shift->dbh->commit }
 
+sub commit_all { $_->commit foreach values %{$DB{app->name}} };
+
 sub rollback { shift->dbh->rollback }
+
+sub rollback_all { $_->rollback foreach values %{$DB{app->name}} };
 
 # ---------------------------------------------------------------------------
 # table description methods

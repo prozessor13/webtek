@@ -103,7 +103,7 @@ sub script :Info(script <filename> -> starts a script for this app) {
    shift @::argv;
    my $ok = eval {
       WebTek::Module->do($file),
-      DB->commit;
+      DB->commit_all;
       1;
    } or do { DB->rollback };
    assert $ok, "error during script, details: $@, $!";
@@ -238,7 +238,7 @@ sub migrate
          my $ok = eval {
             WebTek::Module->do("" . $fname->($name));
             main::up();
-            DB->commit;
+            DB->commit_all;
             1;
          } or do { DB->rollback };
          assert $ok, "error during migration $name, details: $@";
@@ -250,7 +250,7 @@ sub migrate
          my $ok = eval {
             WebTek::Module->do("".$fname->($name));
             main::down();
-            DB->commit;
+            DB->commit_all;
             1;
          } or do { DB->rollback };
          assert $ok, "error during migration $name, details: $@";
