@@ -260,7 +260,8 @@ sub migrate
    } elsif ($cmd eq 'list') {
       foreach my $name ($list->()) {
          if ($name =~ /^\d+_(\w+).pl(@\w+:\w+)?$/) {
-            print " * $1$2 ".($alreay_done->($name)?"(already done)\n":"\n");            
+            my $s = $alreay_done->($name) ? '(already done)' : '--------------';
+            print " * $s $1$2\n";
          }
       }
    } elsif ($cmd eq 'history') {
