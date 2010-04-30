@@ -12,9 +12,7 @@ use WebTek::Event qw( event );
 use WebTek::Export qw( timer_start timer_end );
 require Time::HiRes;
 
-our $Timing;
-our $Indent;
-our $Active;
+our ($Timing, $Indent, $Log, $History, $Time, $LogLongRequest);
 
 sub _init {
    event->register(
@@ -26,7 +24,13 @@ sub _init {
    );
    event->register(
       'name' => 'request-end',
-      'method' => sub { timer_end('request: ' . r->uri) },
+      'method' => sub {
+         timer_end('request: ' . r->uri);
+         my $time = Time::HiRes::time() - $Time;
+         if (not $Log and $LogLongRequest and $time > $LogLongRequest) {
+            log_info $_ foreach (@$History);
+         }
+      },
    );
    event->register(
       'name' => 'request-init-begin',
@@ -39,29 +43,37 @@ sub _init {
 }
 
 sub timer_start {
-   return unless $Active;
+   return unless $Log or $LogLongRequest;
    my $key = shift;
 
    $Indent++;
    $Timing->{$key} = Time::HiRes::time();
-   log_info(("| " x $Indent) . "timer start for '$key'");
+   my $info = ("| " x $Indent) . "timer start for '$key'";
+   log_info($info) if $Log;
+   push @$History, $info if $LogLongRequest;
 }
 
 sub timer_end {
-   return unless $Active;
+   return unless $Log or $LogLongRequest;
    my $key = shift;
 
-   assert($Timing->{$key}, "timing key '$key' not found!");
+   assert $Timing->{$key}, "timing key '$key' not found!";
    my $time = Time::HiRes::time() - $Timing->{$key};
-   log_info(("| " x $Indent) . "timer end for '$key' in $time seconds");
+   my $info = ("| " x $Indent) . "timer end for '$key' in $time seconds";
+   log_info($info) if $Log;
+   push @$History, $info if $LogLongRequest;
    $Indent--;
 }
 
 sub init {
-   if ($Active = config->{'log-time'}) {
-      $Timing = {};
-      $Indent = 0;
-   }
+   $Log = config->{'log-time'};
+   $LogLongRequest = config->{'log-long-request'};
+   return unless $Log or $LogLongRequest;
+   
+   $Indent = 0;
+   $Timing = {};
+   $Time = Time::HiRes::time();
+   $History = ["Long Request:\n"];
 }
 
 1;
