@@ -77,14 +77,12 @@ sub has_a {
    my ($class, $name, $model, $constructor) = @_;
 
    #... create column and accessor name
-   my $column;
+   my ($column, $accessor);
    my $accessor;
    if ($name =~ /^(.+)_id$/) {
-      $column = $name;
-      $accessor = $1;
+      ($column, $accessor) = ($name, $1);
    } else {
-      $column = "$name\_id";
-      $accessor = $name;
+      ($column, $accessor) = ("$name\_id", $name);
    }
 
    #... find the model and constructor for the foreign-key
