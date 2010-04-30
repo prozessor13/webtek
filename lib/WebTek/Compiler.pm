@@ -75,9 +75,17 @@ sub compile {
    my $class = shift;
    $Handler = shift;
    my $string = shift;
+   
+   #... compile code
+   my $handler = ref $Handler && $Handler;
+   my $cache_key = WebTek::Cache::key('compiler', $handler, $string);
+   my $code = WebTek::Cache::cache()->get($cache_key);
+   unless ($code) {
+      $code = to_perl($class->parse($string));
+      WebTek::Cache::cache()->set($cache_key, $code);
+   }
 
-   my $code = to_perl($class->parse($string));
-   # WebTek::Logger::log_info("sub { my (\$handler, \$params) = \@_; return $code }");
+   #... eval code
    my $compiled = eval "sub { my (\$handler, \$params) = \@_; return $code }";
    assert $compiled, "cannot compile code: $code, details: $@";
    return $compiled;
