@@ -1116,6 +1116,7 @@ sub render_as_json {
 
 sub find_template {
    my ($self, $tplname) = @_;
+   my $files = $WebTek::Loader::Files{app->name};
    
    #... checks if a template exists
    sub _exists {
@@ -1129,7 +1130,7 @@ sub find_template {
       while ($fname =~ s|[^/]+/\.\.||) { }
 
       foreach my $dir (reverse @{app->dirs}) {
-         return "$dir$fname" if -e "$dir$fname";
+         return "$dir$fname" if $files->{"$dir$fname"};
       }
    }
    
