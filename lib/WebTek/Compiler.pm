@@ -36,6 +36,7 @@ package WebTek::Compiler;
 
 use strict;
 use WebTek::Util qw( assert );
+use WebTek::Cache qw( cache );
 
 my $String;
 my $LineNo;
@@ -76,7 +77,12 @@ sub compile {
    $Handler = shift;
    my $string = shift;
 
-   my $code = to_perl($class->parse($string));
+   my $cache_key = WebTek::Cache::key('compiler', $string);
+   my $code = (not config->{code_reload}) && cache->get($cache_key);
+   unless ($code) {
+      $code = to_perl($class->parse($string));
+      cache->set($cache_key, $code);
+   }
    # WebTek::Logger::log_info("sub { my (\$handler, \$params) = \@_; return $code }");
    my $compiled = eval "sub { my (\$handler, \$params) = \@_; return $code }";
    assert $compiled, "cannot compile code: $code, details: $@";
