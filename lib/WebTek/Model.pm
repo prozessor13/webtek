@@ -413,7 +413,7 @@ sub find {
    }
    my $where = @where ? "where " . join(" ", @where) : "";
    # create sql and fetch result
-   my $sql = qq{ select $fetch from $table $where $order $limit $offset };
+   my $sql = qq{ select $fetch from $q$table$q $where $order $limit $offset };
    my $rows = $class->_db->do_query($sql, @args);
    #... check if only the count was requested
    return $rows->[0]->{'c'} if $fetch eq 'count(*) as c';
@@ -439,8 +439,9 @@ sub where {
    my @args = @_;
    
    #... fetch from db
+   my $q = $class->_quote;
    my $table = $class->TABLE_NAME;
-   my $sql = qq{ select * from $table where $where };
+   my $sql = qq{ select * from $q$table$q where $where };
    
    #... create objects
    my $objs =  $class->_objs_for_rows($class->_db->do_query($sql, @args));
@@ -452,8 +453,9 @@ sub count_where {
    my $where = shift;   # where and order sql part
    my @args = @_;
 
+   my $q = $class->_quote;
    my $table = $class->TABLE_NAME;
-   my $sql = qq{ select count(*) as count from $table where $where };
+   my $sql = qq{ select count(*) as count from $q$table$q where $where };
    return $class->_db->do_query($sql, @args)->[0]->{'count'};
 }
 
@@ -717,7 +719,7 @@ sub save {
       my @set_columns = @{$self->_lazy};
       my @set_values = $self->_values_for_columns(\@set_columns);
       my $set = join ", ", map { "$q$_$q = ?" } @set_columns;
-      my $sql = qq{ update $table_name set $set where $where };
+      my $sql = qq{ update $q$table_name$q set $set where $where };
       $self->_do_action($sql, @set_values, @where_values);
       $self->_updated(\@set_columns);
 
@@ -730,7 +732,7 @@ sub save {
       my @columns = map { $_->{'name'} } @{$self->columns};
       my $keys = join(", ", map { "$q$_$q" } @columns);
       my $values = join(", ", map { '?' } @columns);
-      my $sql = qq{ insert into $table_name ($keys) values ($values) };
+      my $sql = qq{ insert into $q$table_name$q ($keys) values ($values) };
       my @args = $self->_values_for_columns(\@columns);
       $self->_do_action($sql, @args);
       if ($self->can('id') and not defined $self->{'content'}->{'id'}) {
@@ -845,10 +847,11 @@ sub delete {
    $self->delete_from_cache;
 
    #... delete from db
+   my $q = $self->_quote;
    my $table_name = $self->TABLE_NAME;
-   my $where = join(" and ", map { "$_ = ?" } @{$self->primary_keys});
+   my $where = join(" and ", map { "$q$_$q = ?" } @{$self->primary_keys});
    my @args = map { $self->{'content'}->{$_} } @{$self->primary_keys};
-   my $sql = qq{ delete from $table_name where $where };
+   my $sql = qq{ delete from $q$table_name$q where $where };
    $self->_db->do_action($sql, @args);
 
    event->notify("$class-after-delete", $self);
