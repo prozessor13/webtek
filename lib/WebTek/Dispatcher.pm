@@ -105,7 +105,7 @@ sub process_path {
    }
 
    $WebTek::Dispatcher::CurrentPage = undef;
-   return ($path, request->action || $action, request->format || $format);
+   return ($path, request->action || $action, $format);
 }
 
 # --------------------------------------------------------------------------
