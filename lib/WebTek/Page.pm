@@ -21,6 +21,7 @@ make_accessor('path', 'Macro');
 make_accessor('_errors');
 make_accessor('_suppress_errors');
 make_accessor('has_errors', 'Public');
+make_accessor('default_action');
 
 # ---------------------------------------------------------------------------
 # constants
@@ -63,6 +64,7 @@ sub new {
    
    my $self = $class->SUPER::new;
    $self->_errors({});
+   $self->default_action('index');
    if ($WebTek::Dispatcher::CurrentPage) {
       my $current = ref $WebTek::Dispatcher::CurrentPage;
       foreach my $parent ($self->_parents) {
@@ -1085,7 +1087,9 @@ sub render_as_html {
   
    #... set action
    unless (response->action) {
-      my $action = request->action eq 'index' ? '' : request->action;
+      my $action = request->action eq $self->default_action
+         ? ''
+         : request->action;
       response->action($self->href('action' => $action));
    }
    #... set title

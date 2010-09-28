@@ -57,7 +57,7 @@ sub dispatch {
    #... call the action
    event->notify('before-request-action', $page);
    event->notify(ref($page) . "-before-action-$action", $page);
-   if ($action eq 'index' and $page->can_rest) {
+   if ($action eq $page->default_action and $page->can_rest) {
       &_process_rest_request;
    } else {
       &_process_normal_request;
@@ -70,10 +70,10 @@ sub dispatch {
 sub process_path {
    my ($class, $path_info, $page, $path) = @_;
    
-   $path = $path || WebTek::Request::Path->new;
-   push @$path, $page;
-   my $action = "index";
    my $format = '';
+   my $action = '__default__';
+   $path ||= WebTek::Request::Path->new;
+   push @$path, $page;
    #... process path
    PATH: while ($path_info and $path_info ne '/') {
       #... check for an action
@@ -104,8 +104,10 @@ sub process_path {
       last;
    }
 
+
    $WebTek::Dispatcher::CurrentPage = undef;
-   return ($path, request->action || $action, $format);
+   $action = $page->default_action if $action eq '__default__';
+   return ($path, $action, $format);
 }
 
 # --------------------------------------------------------------------------
