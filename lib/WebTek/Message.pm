@@ -49,7 +49,7 @@ sub load {
    my ($class, $language) = @_;
 
    #... check language
-   return unless $language =~ /^\w\w$/;
+   return unless $language =~ /^\w\w|\w\w\-\w\w$/;
    
    #... find all necesarry files
    my @files;
