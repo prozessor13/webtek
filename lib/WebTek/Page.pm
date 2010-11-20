@@ -1120,11 +1120,11 @@ sub render_as_json {
 
 sub find_template {
    my ($self, $tplname) = @_;
-   my $files = $WebTek::Loader::Files{app->name};
    
    #... checks if a template exists
    sub _exists {
       my $fname = shift;
+      my $files = $WebTek::Loader::Files{app->name};
 
       # For example <template name="../OtherPage/index">:
       # If OtherPage is defined e.g. in another module
