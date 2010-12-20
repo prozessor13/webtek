@@ -15,10 +15,11 @@ use WebTek::Data::Struct qw( struct );
 sub new {
    my $class = shift;
    my $config = config(shift || 'cache')->{$class};
+   my $timeout = $config->{'timeout'} || 10;
    eval "require TokyoTyrant";
    my $rdb = TokyoTyrant::RDB->new;
    log_error $rdb->errmsg($rdb->ecode)
-      unless $rdb->open($config->{'host'}, $config->{'port'});
+      unless $rdb->open($config->{'host'}, $config->{'port'}, $timeout);
    return bless \$rdb, $class;
 }
 
