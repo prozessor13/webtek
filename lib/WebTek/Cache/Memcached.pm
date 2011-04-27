@@ -38,10 +38,10 @@ sub set {
 }
 
 sub set_multi {
-   my ($self, @sets) = @_;
-   my @sets2 = map [ md5_hex(encode_utf8($_->[0])), $_->[1] ], @sets;
+   my ($self, $sets) = @_;
+   my @sets2 = map [ md5_hex(encode_utf8($_->[0])), $_->[1] ], @$sets;
    my @r = $$self->set_multi(@sets2);
-   if (my @e = grep $_, map { @r[$_] ? undef : $sets[$_][0] } 0 .. $#r) {
+   if (my @e = grep $_, map { @r[$_] ? undef : $sets->[$_][0] } 0 .. $#r) {
       log_warning("WebTek::Cache::Memcached cannot save keys: @e");
    }
    return \@r;
@@ -60,8 +60,8 @@ sub get {
 }
 
 sub get_multi {
-   my ($self, @keys) = @_;
-   my %keys = map { md5_hex(encode_utf8($_)) => $_ } @keys;
+   my ($self, $keys) = @_;
+   my %keys = map { md5_hex(encode_utf8($_)) => $_ } @$keys;
    my $result = $$self->get_multi(keys %keys);
    _utf8_on($result->{$_}) foreach keys %$result;
    return { map { $keys{$_} => $result->{$_} } keys %$result };
@@ -81,7 +81,5 @@ sub decr {
    my ($self, $key, @decr) = @_;
    return $$self->decr(md5_hex(encode_utf8($key)), @decr);
 }
-
-sub find { throw "method not supportet" }
 
 1;

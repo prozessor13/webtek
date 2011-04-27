@@ -45,28 +45,33 @@ sub settings {
 
 sub key { return join ",", (app->name, @_) }
 
-sub set { }
+sub set { throw "method not implemented" }
 
 sub set_multi {
-   my $class = shift;
-   return [ map { $class->set(@$_) } @_ ];
+   my ($class, $sets) = @_;
+   return [ map { $class->set(@$_) } @$sets ];
 }
 
-sub add { }
+sub add { throw "method not implemented" }
 
-sub get { }
+sub get { throw "method not implemented" }
 
 sub get_multi {
-   my $class = shift;
-   return { map { $_ => $class->get($_) } @_ };
+   my ($class, $keys) = @_;
+   return { map { $_ => $class->get($_) } @$keys };
 }
 
-sub delete { }
+sub delete { throw "method not implemented" }
 
-sub incr { }
+sub delete_multi {
+   my ($class, $keys) = @_;
+   return { map { $_ => $class->delete($_) } @$keys };
+}
 
-sub decr { }
+sub incr { throw "method not implemented" }
 
-sub find { }
+sub decr { throw "method not implemented" }
+
+sub find { throw "method not implemented" }
 
 1;

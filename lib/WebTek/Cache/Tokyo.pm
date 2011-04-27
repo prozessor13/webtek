@@ -19,7 +19,7 @@ sub new {
    eval "require TokyoTyrant";
    my $rdb = TokyoTyrant::RDB->new;
    log_error $rdb->errmsg($rdb->ecode)
-      unless $rdb->open($config->{'host'}, $config->{'port'}, $timeout);
+      unless $rdb->open($config->{'host'}, $config->{'port'});
    return bless \$rdb, $class;
 }
 
@@ -47,11 +47,11 @@ sub get {
 }
 
 sub get_multi {
-   my ($self, @keys) = @_;
+   my ($self, $keys) = @_;
    my %hash = map {
       my $k = encode("UTF-8", $_);
       $k => undef;
-   } @keys;
+   } @$keys;
    log_error $$self->errmsg($$self->ecode) if $$self->mget(\%hash) eq -1;
    foreach (keys %hash) {
       my $k = decode("UTF-8", $_);
