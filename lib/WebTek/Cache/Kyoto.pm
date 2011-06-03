@@ -1,13 +1,13 @@
 package WebTek::Cache::Kyoto;
 
 # max demmelbauer
-# 10-08-07
+# 01-05-11
 #
 # use kyoto as cache for webtek: http://fallabs.com/kyototycoon/
 
 use strict;
-use JSON::XS;
 use APR::Base64;
+use Storable qw( nfreeze thaw );
 use WebTek::Config qw( config );
 use WebTek::Filter qw( decode_url );
 use WebTek::Logger qw( log_warning );
@@ -32,7 +32,6 @@ sub _connect {
 
 sub _request {
    my ($self, $method, $params, $nolog) = @_;
-   #... prepare request (FIXME! add colenc)
    delete $params->{xt} unless $params->{xt};
    $params->{DB} = $self->{config}->{db} if $self->{config}->{db};
    my $query = join "\n", map {
@@ -62,14 +61,14 @@ sub _request {
 
 sub set {
    my ($self, $key, $value, $xt) = @_;
-   my $params = { key => $key, value => encode_json($value), xt => $xt };
+   my $params = { key => $key, value => nfreeze($value), xt => $xt };
    my $res = $self->_request('/rpc/set', $params);
    log_warning "kyoto set error: $res->{ERROR}" if $res->{ERROR};
 }
 
 sub set_multi {
    my ($self, $params, $xt) = @_;
-   my %params = map { ("_$_->[0]" => encode_json($_->[1])) } @$params;
+   my %params = map { ("_$_->[0]" => nfreeze($_->[1])) } @$params;
    $params{xt} = $xt;
    my $res = $self->_request('/rpc/set_bulk', \%params);
    log_warning "kyoto set_multi error: $res->{ERROR}" if $res->{ERROR};
@@ -77,7 +76,7 @@ sub set_multi {
 
 sub get {
    my ($self, $key) = @_;
-   return decode_json($self->_request('/rpc/get', { key => $key })->{value});
+   return thaw($self->_request('/rpc/get', { key => $key })->{value});
 }
 
 sub get_multi {
@@ -85,7 +84,7 @@ sub get_multi {
    my %params = map { ("_$_" => undef) } @$keys;
    my $res = $self->_request('/rpc/get_bulk', \%params, 1);
    delete $res->{num};
-   my %res = map { substr($_, 1) => decode_json($res->{$_}) } keys %$res;
+   my %res = map { substr($_, 1) => thaw($res->{$_}) } keys %$res;
    return \%res;
 }
 

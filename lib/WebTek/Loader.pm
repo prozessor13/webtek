@@ -140,16 +140,20 @@ sub load_messages {
 
 sub load_perl_modules {
    my ($files, $safe) = @_;
+   my %modules;
    foreach my $dir (@{app->dirs}) {
       foreach my $file (@$files) {
          next unless $file =~ /$dir\/(([A-Z]\w+\/)+[A-Z]\w*).pm$/;
          #... create modulename from filename
          my $module = $1;
          $module =~ s|/|::|g;
-         #... (safe) load module
-         eval { WebTek::Module->load(app->class_prefix . '::' . $module) };
-         if (my $e = $@) { $safe ? log_error($e) : log_fatal($e) }
+         $modules{app->class_prefix . '::' . $module} = 1;
       }
+   }
+   #... (safe) load modules
+   foreach my $module (keys %modules) {
+      eval { WebTek::Module->load($module) };
+      if (my $e = $@) { $safe ? log_error($e) : log_fatal($e) }   
    }
 }
 
