@@ -41,10 +41,11 @@ sub _request {
    my $length = length($query);
    #... send request
    my $socket = $self->{socket} || $self->_connect || return {};
-   $socket->send("POST $method HTTP/1.1\r\n");
-   $socket->send("Content-Length: $length\r\n");
-   $socket->send("Content-Type: text/tab-separated-values; colenc=B\r\n");
-   $socket->send("\r\n$query");
+   $socket->send("POST $method HTTP/1.1\r\n"
+      . "Content-Length: $length\r\n"
+      . "Content-Type: text/tab-separated-values; colenc=B\r\n\r\n"
+      . $query
+   );
    my ($len, $content, $colenc, %decoded, $k, $v);
    while ((my $line = $socket->getline) ne "\r\n") {
       $len = $1 if $line =~ /Content-Length: (\d+)/;
