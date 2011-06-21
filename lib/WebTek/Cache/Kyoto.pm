@@ -22,10 +22,11 @@ sub new {
 
 sub _connect {
    my $self = shift;
+   my $addr = "$self->{config}->{host}:$self->{config}->{port}";
    $self->{socket} = IO::Socket::INET->new(
-      'PeerAddr' => "$self->{config}->{host}:$self->{config}->{port}",
+      'PeerAddr' => $addr,
       'Proto' => 'tcp',
-   ) or log_warning "cannot connect to kyoto server, $!";
+   ) or log_warning "cannot connect to kyoto server $addr, $!";
    $self->{socket} and $self->{socket}->autoflush(1);
    return $self->{socket};
 }
@@ -63,7 +64,7 @@ sub set {
    my ($self, $key, $value, $xt) = @_;
    my $params = { key => $key, value => nfreeze($value), xt => $xt };
    my $res = $self->_request('/rpc/set', $params);
-   log_warning "kyoto set error: $res->{ERROR}" if $res->{ERROR};
+   log_warning "kyoto set error: $key - $res->{ERROR}" if $res->{ERROR};
 }
 
 sub set_multi {
@@ -91,7 +92,7 @@ sub get_multi {
 sub delete {
    my ($self, $key) = @_;
    my $res = $self->_request('/rpc/remove', { key => $key });
-   log_warning "kyoto delete error: $res->{ERROR}" if $res->{ERROR};
+   log_warning "kyoto delete error: $key - $res->{ERROR}" if $res->{ERROR};
 }
 
 sub delete_multi {

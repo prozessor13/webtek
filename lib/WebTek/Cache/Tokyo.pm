@@ -27,15 +27,20 @@ sub set {
    my ($self, $key, $value) = @_;
    $key = encode("UTF-8", $key);
    my $ref = ref $value ? $value : \$value;
-   log_error $$self->errmsg($$self->ecode)
+   log_error "$key - " . $$self->errmsg($$self->ecode)
       unless my $return = $$self->put($key, Storable::nfreeze($ref));
    return $return;
+}
+
+sub set_multi {
+   my ($self, $sets) = @_;
+   return [ map { $self->set(@$_) } @$sets ];
 }
 
 sub add {
    my ($self, $key, $value) = @_;
    $key = encode("UTF-8", $key);
-   log_error $$self->errmsg($$self->ecode)
+   log_error "$key - " . $$self->errmsg($$self->ecode)
       unless my $return = $$self->putkeep($key, Storable::nfreeze($value));
    return $return;
 }
@@ -63,9 +68,14 @@ sub get_multi {
 sub delete {
    my ($self, $key) = @_;
    $key = encode("UTF-8", $key);
-   log_error $$self->errmsg($$self->ecode)
+   log_error "$key - " . $$self->errmsg($$self->ecode)
       unless my $return = $$self->out($key);
    return $return;
+}
+
+sub delete_multi {
+   my ($self, $keys) = @_;
+   return { map { $_ => $self->delete($_) } @$keys };
 }
 
 sub incr {

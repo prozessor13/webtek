@@ -72,6 +72,11 @@ sub delete {
    return $$self->delete(md5_hex(encode_utf8($key)));
 }
 
+sub delete_multi {
+   my ($self, $keys) = @_;
+   return { map { $_ => $self->delete($_) } @$keys };
+}
+
 sub incr {
    my ($self, $key, @incr) = @_;
    return $$self->incr(md5_hex(encode_utf8($key)), @incr);

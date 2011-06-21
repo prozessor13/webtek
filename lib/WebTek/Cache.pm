@@ -45,28 +45,23 @@ sub settings {
 
 sub key { return join ",", (app->name, @_) }
 
+# --------------------------------------------------------------------------
+# interface for a cache subclass
+# --------------------------------------------------------------------------
+
 sub set { }
 
-sub set_multi {
-   my ($class, $sets) = @_;
-   return [ map { $class->set(@$_) } @$sets ];
-}
+sub set_multi { }
 
 sub add { }
 
 sub get { }
 
-sub get_multi {
-   my ($class, $keys) = @_;
-   return { map { $_ => $class->get($_) } @$keys };
-}
+sub get_multi { }
 
 sub delete { }
 
-sub delete_multi {
-   my ($class, $keys) = @_;
-   return { map { $_ => $class->delete($_) } @$keys };
-}
+sub delete_multi { }
 
 sub incr { }
 
