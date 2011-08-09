@@ -66,6 +66,7 @@ sub set {
    my $params = { key => $key, value => nfreeze($value), xt => $xt };
    my $res = $self->_request('/rpc/set', $params);
    log_warning "kyoto set error: $key - $res->{ERROR}" if $res->{ERROR};
+   return $res->{ERROR} ? 0 : 1;
 }
 
 sub set_multi {
@@ -74,6 +75,7 @@ sub set_multi {
    $params{xt} = $xt;
    my $res = $self->_request('/rpc/set_bulk', \%params);
    log_warning "kyoto set_multi error: $res->{ERROR}" if $res->{ERROR};
+   return $res->{ERROR} ? 0 : 1;
 }
 
 sub get {
@@ -94,6 +96,7 @@ sub delete {
    my ($self, $key) = @_;
    my $res = $self->_request('/rpc/remove', { key => $key });
    log_warning "kyoto delete error: $key - $res->{ERROR}" if $res->{ERROR};
+   return $res->{ERROR} ? 0 : 1;
 }
 
 sub delete_multi {
@@ -101,6 +104,7 @@ sub delete_multi {
    my %params = map { ("_$_" => undef) } @$keys;
    my $res = $self->_request('/rpc/remove_bulk', \%params);
    log_warning "kyoto delete_multi error: $res->{ERROR}" if $res->{ERROR};
+   return $res->{ERROR} ? 0 : 1;
 }
 
 sub find {
