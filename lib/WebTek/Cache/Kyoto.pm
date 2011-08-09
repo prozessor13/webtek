@@ -10,7 +10,7 @@ use APR::Base64;
 use Storable qw( nfreeze thaw );
 use WebTek::Config qw( config );
 use WebTek::Filter qw( decode_url );
-use WebTek::Logger qw( log_warning );
+use WebTek::Logger qw( log_error );
 
 sub new {
    my $class = shift;
@@ -26,7 +26,7 @@ sub _connect {
    $self->{socket} = IO::Socket::INET->new(
       'PeerAddr' => $addr,
       'Proto' => 'tcp',
-   ) or log_warning "cannot connect to kyoto server $addr, $!";
+   ) or log_error "cannot connect to kyoto server $addr, $!";
    $self->{socket} and $self->{socket}->autoflush(1);
    return $self->{socket};
 }
@@ -40,7 +40,8 @@ sub _request {
    } keys %$params;
    my $length = length($query);
    #... send request
-   my $socket = $self->{socket} || $self->_connect || return {};
+   my $socket = $self->{socket} || $self->_connect
+      || return { ERROR => 'cannot connect to server' };
    $socket->send("POST $method HTTP/1.1\r\n"
       . "Content-Length: $length\r\n"
       . "Content-Type: text/tab-separated-values; colenc=B\r\n\r\n"
@@ -65,7 +66,7 @@ sub set {
    my ($self, $key, $value, $xt) = @_;
    my $params = { key => $key, value => nfreeze($value), xt => $xt };
    my $res = $self->_request('/rpc/set', $params);
-   log_warning "kyoto set error: $key - $res->{ERROR}" if $res->{ERROR};
+   log_error "kyoto set error: $key - $res->{ERROR}" if $res->{ERROR};
    return $res->{ERROR} ? 0 : 1;
 }
 
@@ -74,7 +75,7 @@ sub set_multi {
    my %params = map { ("_$_->[0]" => nfreeze($_->[1])) } @$params;
    $params{xt} = $xt;
    my $res = $self->_request('/rpc/set_bulk', \%params);
-   log_warning "kyoto set_multi error: $res->{ERROR}" if $res->{ERROR};
+   log_error "kyoto set_multi error: $res->{ERROR}" if $res->{ERROR};
    return $res->{ERROR} ? 0 : 1;
 }
 
@@ -87,7 +88,7 @@ sub get_multi {
    my ($self, $keys) = @_;
    my %params = map { ("_$_" => undef) } @$keys;
    my $res = $self->_request('/rpc/get_bulk', \%params, 1);
-   delete $res->{num};
+   delete $res->{num}; delete $res->{ERROR};
    my %res = map { substr($_, 1) => thaw($res->{$_}) } keys %$res;
    return \%res;
 }
@@ -95,7 +96,7 @@ sub get_multi {
 sub delete {
    my ($self, $key) = @_;
    my $res = $self->_request('/rpc/remove', { key => $key });
-   log_warning "kyoto delete error: $key - $res->{ERROR}" if $res->{ERROR};
+   log_error "kyoto delete error: $key - $res->{ERROR}" if $res->{ERROR};
    return $res->{ERROR} ? 0 : 1;
 }
 
@@ -103,7 +104,7 @@ sub delete_multi {
    my ($self, $keys) = @_;
    my %params = map { ("_$_" => undef) } @$keys;
    my $res = $self->_request('/rpc/remove_bulk', \%params);
-   log_warning "kyoto delete_multi error: $res->{ERROR}" if $res->{ERROR};
+   log_error "kyoto delete_multi error: $res->{ERROR}" if $res->{ERROR};
    return $res->{ERROR} ? 0 : 1;
 }
 
