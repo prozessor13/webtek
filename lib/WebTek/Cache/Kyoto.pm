@@ -22,7 +22,7 @@ sub new {
 
 sub _connect {
    my $self = shift;
-   my $addr = "$self->{config}->{host}:$self->{config}->{port}";
+   my $addr = "$self->{config}{host}:$self->{config}{port}";
    $self->{socket} = IO::Socket::INET->new(
       'PeerAddr' => $addr,
       'Proto' => 'tcp',
@@ -32,9 +32,9 @@ sub _connect {
 }
 
 sub _request {
-   my ($self, $method, $params, $nolog) = @_;
+   my ($self, $method, $params) = @_;
    delete $params->{xt} unless $params->{xt};
-   $params->{DB} = $self->{config}->{db} if $self->{config}->{db};
+   delete $params->{DB} unless $params->{DB};
    my $query = join "\n", map {
       APR::Base64::encode($_) . "\t" . APR::Base64::encode($params->{$_})
    } keys %$params;
@@ -63,55 +63,54 @@ sub _request {
 }
 
 sub set {
-   my ($self, $key, $value, $xt) = @_;
-   my $params = { key => $key, value => nfreeze($value), xt => $xt };
-   my $res = $self->_request('/rpc/set', $params);
+   my ($self, $key, $value, %p) = @_;
+   %p = ( %p, key => $key, value => nfreeze($value));
+   my $res = $self->_request('/rpc/set', \%p);
    log_error "kyoto set error: $key - $res->{ERROR}" if $res->{ERROR};
    return $res->{ERROR} ? 0 : 1;
 }
 
 sub set_multi {
-   my ($self, $params, $xt) = @_;
-   my %params = map { ("_$_->[0]" => nfreeze($_->[1])) } @$params;
-   $params{xt} = $xt;
-   my $res = $self->_request('/rpc/set_bulk', \%params);
+   my ($self, $data, %p) = @_;
+   %p = ( %p, map { ("_$_->[0]" => nfreeze($_->[1])) } @$data );
+   my $res = $self->_request('/rpc/set_bulk', \%p);
    log_error "kyoto set_multi error: $res->{ERROR}" if $res->{ERROR};
    return $res->{ERROR} ? 0 : 1;
 }
 
 sub get {
-   my ($self, $key) = @_;
-   return thaw($self->_request('/rpc/get', { key => $key })->{value});
+   my ($self, $key, %p) = @_;
+   return thaw($self->_request('/rpc/get', { %p, key => $key })->{value});
 }
 
 sub get_multi {
-   my ($self, $keys) = @_;
-   my %params = map { ("_$_" => undef) } @$keys;
-   my $res = $self->_request('/rpc/get_bulk', \%params, 1);
+   my ($self, $keys, %p) = @_;
+   %p = ( %p, map { ("_$_" => undef) } @$keys );
+   my $res = $self->_request('/rpc/get_bulk', \%p);
    delete $res->{num}; delete $res->{ERROR};
    my %res = map { substr($_, 1) => thaw($res->{$_}) } keys %$res;
    return \%res;
 }
 
 sub delete {
-   my ($self, $key) = @_;
-   my $res = $self->_request('/rpc/remove', { key => $key });
+   my ($self, $key, %p) = @_;
+   my $res = $self->_request('/rpc/remove', { %p, key => $key });
    log_error "kyoto delete error: $key - $res->{ERROR}" if $res->{ERROR};
    return $res->{ERROR} ? 0 : 1;
 }
 
 sub delete_multi {
-   my ($self, $keys) = @_;
-   my %params = map { ("_$_" => undef) } @$keys;
-   my $res = $self->_request('/rpc/remove_bulk', \%params);
+   my ($self, $keys, %p) = @_;
+   %p = ( %p, map { ("_$_" => undef) } @$keys );
+   my $res = $self->_request('/rpc/remove_bulk', \%p);
    log_error "kyoto delete_multi error: $res->{ERROR}" if $res->{ERROR};
    return $res->{ERROR} ? 0 : 1;
 }
 
 sub find {
-   my ($self, $prefix, $max) = @_;
-   my $params = { prefix => $prefix, max => $max || -1 };
-   my $res = $self->_request('/rpc/match_prefix', $params);
+   my ($self, $prefix, %p) = @_;
+   %p = ( %p, prefix => $prefix, max => $p{max} || -1 );
+   my $res = $self->_request('/rpc/match_prefix', \%p);
    delete $res->{num};
    my @keys = map substr($_, 1), keys %$res;
    return \@keys;   
