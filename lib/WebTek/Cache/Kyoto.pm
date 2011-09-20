@@ -7,6 +7,7 @@ package WebTek::Cache::Kyoto;
 
 use strict;
 use APR::Base64;
+use Encode qw( _utf8_on );
 use Storable qw( nfreeze thaw );
 use WebTek::Config qw( config );
 use WebTek::Filter qw( decode_url );
@@ -47,7 +48,7 @@ sub _request {
       . "Content-Type: text/tab-separated-values; colenc=B\r\n\r\n"
       . $query
    );
-   my ($len, $content, $colenc, %decoded, $k, $v);
+   my ($len, $content, $colenc, @decoded, %decoded, $k, $v);
    while ((my $line = $socket->getline) ne "\r\n") {
       $len = $1 if $line =~ /Content-Length: (\d+)/;
       $colenc = $1 if $line =~ /colenc=(\w+)/;
@@ -56,9 +57,14 @@ sub _request {
    }
    $self->{socket}->read($content, $len);
    my @c = map { ($k, $v) = split "\t"; ($k, $v) } split "\n", $content;
-   if ($colenc eq 'B') { %decoded = map APR::Base64::decode($_), @c }
-   elsif ($colenc eq 'U') { %decoded = map decode_url(0, $_), @c }
-   else { %decoded = @c }
+   if ($colenc eq 'B') { @decoded = map APR::Base64::decode($_), @c }
+   elsif ($colenc eq 'U') { @decoded = map decode_url(0, $_), @c }
+   else { @decoded = @c }
+   while (@decoded) {
+      my ($k, $v) = (shift @decoded, shift @decoded);
+      _utf8_on($k);
+      $decoded{$k} = $v;
+   }
    return \%decoded;
 }
 
