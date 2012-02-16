@@ -34,7 +34,20 @@ sub set {
 
 sub set_multi {
    my ($self, $sets) = @_;
-   return [ map { $self->set(@$_) } @$sets ];
+   my ($return, @sets) = (1, @$sets);
+   while (@sets) {
+      my $limit = @sets > 10000 ? 10000 : scalar(@sets);
+      my @_sets = 
+      my @_sets = map {
+         my ($key, $value) = @$_;
+         $value = ref $value ? $value : \$value;
+         (encode("UTF-8", $key), Storable::nfreeze($value));
+      } splice(@sets, 0, $limit);
+      log_error $$self->errmsg($$self->ecode)
+         unless my $r = $$self->misc('putlist', \@_sets);
+      $return &&= $r;
+   }
+   return $return;
 }
 
 sub add {
@@ -75,7 +88,15 @@ sub delete {
 
 sub delete_multi {
    my ($self, $keys) = @_;
-   return { map { $_ => $self->delete($_) } @$keys };
+   my ($return, @keys) = (1, @$keys);
+   while (@keys) {
+      my $limit = @keys > 100000 ? 100000 : scalar(@keys);
+      my @_keys = map { encode("UTF-8", $_); $_ } splice(@keys, 0, $limit);
+      log_error $$self->errmsg($$self->ecode)
+         unless my $r = $$self->misc('outlist', \@_keys);
+      $return &&= $r;
+   }
+   return $return;
 }
 
 sub incr {
