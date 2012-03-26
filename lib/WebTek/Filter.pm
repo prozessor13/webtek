@@ -34,7 +34,8 @@ sub DateLanguageForCode { {
 
 sub compose_uri :Filter {
    my ($handler, $uri, $params) = @_;
-   
+   return $uri unless $params and keys %$params;
+
    #... encode params
    my $encoded = {};
    sub _encode {
@@ -42,14 +43,13 @@ sub compose_uri :Filter {
       $string =~ s/([^\w-\.\!\~\*\'\(\)])/'%'.sprintf("%02x", ord($1))/eg;
       return $string;
    }
-   foreach my $key (keys %$params) {
-      $encoded->{_encode($key)} = _encode($params->{$key});
-   }
-   
-   #... compose uri
-   return keys %$params
-      ? "$uri?" . join("&", map("$_=$encoded->{$_}", keys %$encoded))
-      : $uri;
+
+   return "$uri?" . join('&', map {
+      my ($key, $value) = ($_, $params->{$_});
+      ref $value eq 'ARRAY'
+         ? map($key . "=" . _encode($_), @$value)
+         : $key . "=" . _encode($value)
+   } keys %$params);
 }
 
 sub encode_url :Filter {
