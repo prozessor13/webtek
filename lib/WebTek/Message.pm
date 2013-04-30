@@ -71,4 +71,15 @@ sub load {
    $Messages{app->name}->{$language} = $msgs;
 }
 
+sub set {
+   my ($class, $language, $messages) = @_;
+   log_debug("set messages for $language");
+
+   my $msgs = $Messages{app->name} && $Messages{app->name}->{$language} || {};
+   $messages = WebTek::GetText::read_po(undef, $messages);
+
+   #... remember messages
+   $Messages{app->name}->{$language} = { %$msgs, %$messages };
+}
+
 1;

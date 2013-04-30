@@ -51,10 +51,11 @@ sub _find_messages {
 # ---------------------------------------------------------------------------
 
 sub read_po {
-   my $file = shift;
+   my ($file, $text) = @_;
+   $text ||= slurp($file);
       
    my ($msgs, $infos, $lineno, $state, $key, $value) = ({}, {});
-   foreach my $line (split /\n/, slurp($file)) {
+   foreach my $line (split /\n/, $text) {
       $lineno++;
       next if ($line =~ /^#/);            # ignore comments
       next if ($line =~ /^\s*$/);         # empty lines

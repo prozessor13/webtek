@@ -43,24 +43,21 @@ sub load {
    #... find all necesarry files
    my @files = grep -f, map "$_/$fname", @{app->dirs};
 
+   #... remember that the module is already loaded
+   $Loaded{$package} = scalar @files;
+   $INC{$incname} = $files[0];
+
    #... (re)load code
    if (@files) {
       #... load module files
-      foreach my $file (@files) {
-         log_debug("load perl module file $file");
-         $class->do($file, $package);
-      }
-
+      my $src = join "\n", map $class->src($_, $package), @files;
+      eval $src or die $@;
       #... may init module
       $package->_init
          if $package->can('_INIT')
          and $package->_INIT
          and $package->can('_init');
    }
-
-   #... remember that the module is already loaded
-   $Loaded{$package} = scalar @files;
-   $INC{$incname} = $files[0];
    
    event->notify('module-loaded', $package);
 }
@@ -85,21 +82,26 @@ sub source_filter {
    return $source;
 }
 
-sub do {
+sub src {
    my ($_class, $_file, $_package) = @_;
    #... read code from disk
    my $_code = $_class->source_filter(slurp($_file));
    #... check if code is in an package
    $_package ||= 'main';
    #... eval code
-   eval qq{
+   return qq{
 package $_package;
 use strict;
 use WebTek::Globals;
 #line 1 "$_file"
 $_code;
 1;
-   } or die "WebTek::Module: cannot load file '$_file', details $@";   
+};
+}
+
+sub do {
+   my ($_class, $_file, $_package) = @_;
+   eval $_class->src($_file, $_package) or die $@;
 }
 
 1;

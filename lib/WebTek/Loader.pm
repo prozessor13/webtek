@@ -125,17 +125,18 @@ sub load_configs {
 
 sub load_messages {
    my ($files, $safe) = @_;
-   my @loaded;
+   my (@loaded, %messages);
    foreach my $dir (grep -d, map "$_/messages", @{app->dirs}) {
       foreach my $file (@$files) {
          next unless $file =~ /^$dir\/(\w\w|\w\w\-\w\w)(\.([^\/]+))?\.po$/;
          my ($name, $env) = ($1, $3);
          next if grep { $name eq $_ } @loaded;
          next if $env and not grep { $_ eq $env } @{app->env};
-         WebTek::Message->load($name);
+         $messages{$name} .= WebTek::Util::slurp($file);
          push @loaded, $name;
       }
    }
+   WebTek::Message->set($_, $messages{$_}) foreach keys %messages;
 }
 
 sub load_perl_modules {
@@ -152,8 +153,8 @@ sub load_perl_modules {
    }
    #... (safe) load modules
    foreach my $module (keys %modules) {
-      eval { WebTek::Module->load($module) };
-      if (my $e = $@) { $safe ? log_error($e) : log_fatal($e) }   
+      eval { WebTek::Module->require($module) };
+      if (my $e = $@) { $safe ? log_error($e) : log_fatal($e) }
    }
 }
 
