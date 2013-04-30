@@ -129,11 +129,11 @@ sub load_messages {
    foreach my $dir (grep -d, map "$_/messages", @{app->dirs}) {
       foreach my $file (@$files) {
          next unless $file =~ /^$dir\/(\w\w|\w\w\-\w\w)(\.([^\/]+))?\.po$/;
-         my ($name, $env) = ($1, $3);
-         next if grep { $name eq $_ } @loaded;
+         my ($language, $env) = ($1, $3);
+         next if grep { $file eq $_ } @loaded;
          next if $env and not grep { $_ eq $env } @{app->env};
-         $messages{$name} .= WebTek::Util::slurp($file);
-         push @loaded, $name;
+         $messages{$language} .= WebTek::Util::slurp($file);
+         push @loaded, $file;
       }
    }
    WebTek::Message->set($_, $messages{$_}) foreach keys %messages;
