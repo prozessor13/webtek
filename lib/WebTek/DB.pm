@@ -103,7 +103,7 @@ sub dbh {
    #... create new connection
    $self->{'dbh'} = $self->connect;
    $self->{'dbh'}->{'FetchHashKeyName'} = 'NAME_lc';
-   $self->{'dbh'}->{'AutoCommit'} = 0;
+   $self->{'dbh'}->{'AutoCommit'} = $self->config->{'autocommit'} || 0;
    if (my $long_read_len = $self->config->{'long-read-length'}) {
       $self->{'dbh'}->{'LongReadLen'} = $long_read_len;      
    }
