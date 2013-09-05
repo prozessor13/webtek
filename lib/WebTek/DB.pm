@@ -107,6 +107,9 @@ sub dbh {
    if (my $long_read_len = $self->config->{'long-read-length'}) {
       $self->{'dbh'}->{'LongReadLen'} = $long_read_len;      
    }
+   foreach my $extra (keys %{$self->config->{'extra'} || {}}) {
+      $self->{'dbh'}->{$extra} = $self->config->{'extra'}->{$extra};
+   }
    return $self->{'dbh'};
 }
 
