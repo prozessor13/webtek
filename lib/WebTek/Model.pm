@@ -26,6 +26,7 @@ our %Primary_keys = ();
 our %Columns = ();
 our %Has_a = ();
 our %Real = ();
+our %Fetch = ();
 
 make_accessor('_in_db');               # boolean
 make_accessor('_checked');             # boolean
@@ -48,6 +49,7 @@ sub DATA_TYPE_BLOB { 5 }
 sub DATA_TYPE_STRUCT { 6 }
 sub DATA_TYPE_JSON { 6 }
 sub DATA_TYPE_PERL { 7 }
+sub DATA_TYPE_GEOJSON { 8 }
 
 sub _INIT { 1 }
 
@@ -96,8 +98,9 @@ sub DATATYPES { {} }
 
 sub DEFAULTS { {} }
 
-# from unique constraint name to column
 sub UNIQUE_CONSTRAINTS { {} }
+
+sub FETCH { $Fetch{app->name}{ref $_[0] || $_[0]} }
 
 sub primary_keys {
    my $class = ref $_[0] || $_[0];
@@ -263,7 +266,7 @@ sub new_from_db {
 
 sub _init {
    my $class = shift;
-   
+
    no strict 'refs';
 
    #... check if model is a real model
@@ -285,6 +288,7 @@ sub _init {
       $class->_real($real);
       log_debug "$$: copy modelinfos from $real into not real model $class";
       #... set model info
+      $Fetch{app->name}{$class} = $Fetch{app->name}{$real};
       $class->_columns($real->columns);
       $class->_primary_keys($real->primary_keys);
       $class->has_a(@$_[1,2,3]) foreach @{$real->foreign_keys};
@@ -323,7 +327,7 @@ sub _init {
    my $columns = $class->_db->column_info($tablename);
    my $primary_keys = $class->_db->primary_keys($tablename);
    assert(scalar(@$primary_keys), "no primary keys defined for '$tablename'");
-   #... create model methods   
+   #... create model methods and fetch-string
    foreach my $column (@$columns) {
       #... create an accessor for each column
       $class->make_columnname_method($column->{'name'});
@@ -335,6 +339,11 @@ sub _init {
    #... remember colums and primary keys
    $class->_columns($columns);
    $class->_primary_keys($primary_keys);
+   #... set extra fetch string
+   $Fetch{app->name}{$class} = '*';
+   foreach my $c (@$columns) {
+      $Fetch{app->name}{$class} .= ",$c->{'fetch'}" if $c->{'fetch'};
+   }
 }
 
 # --------------------------------------------------------------------------
@@ -374,7 +383,7 @@ sub find {
    my $combine = $params{'combine'} || 'and';
    my $limit = $params{'limit'} ? "limit $params{'limit'}" : '';
    my $offset = $params{'offset'} ? "offset $params{'offset'}" : '';
-   my $fetch = $params{'FETCH'} || "*";
+   my $fetch = $params{'FETCH'} || $class->FETCH;
    delete $params{'FETCH'};
    delete $params{'limit'};
    delete $params{'offset'};
@@ -570,6 +579,8 @@ sub _content_into_objs {
       if ($data_type == DATA_TYPE_BOOLEAN) {
          $content->{$name} = $value ? 1 : 0;         
       } elsif ($data_type == DATA_TYPE_JSON) {
+         $content->{$name} = struct($value);
+      } elsif ($data_type == DATA_TYPE_GEOJSON) {
          $content->{$name} = struct($value);
       } elsif ($data_type == DATA_TYPE_PERL) {
          $content->{$name} = struct($value, 'perl');

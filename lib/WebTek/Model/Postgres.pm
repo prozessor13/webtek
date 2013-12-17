@@ -31,8 +31,15 @@ sub _columns {
          $column->{'webtek-data-type'} = $class->DATA_TYPE_DATE;
       } elsif ($column->{'type'} =~ /char|text/i) {
          $column->{'webtek-data-type'} = $class->DATA_TYPE_STRING;
+      } elsif ($column->{'type'} =~ /geometry/i) {
+         $column->{'webtek-data-type'} = $class->DATA_TYPE_GEOJSON;
       } else {
          $column->{'webtek-data-type'} = $class->DATA_TYPE_UNKNOWN;
+      }
+
+      #... define fetch-string
+      if ($column->{'webtek-data-type'} eq $class->DATA_TYPE_GEOJSON) {
+         $column->{'fetch'} = "ST_ASGeoJSON($name) as $name";         
       }
    
       #... find default-value
