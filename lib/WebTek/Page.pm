@@ -1112,7 +1112,7 @@ sub render_as_json {
    
    assert $body, "render_as_json: no response body defined!";
    timer_start("render_as_json");
-   response->content_type('text/javascript');
+   response->content_type('application/json');
    response->body($self->encode_js($body, { 'pretty' => response->pretty }));
    response->write($self->render_template($self->MASTER_TEMPLATE_JSON));
    timer_end("render_as_json");
