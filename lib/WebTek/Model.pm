@@ -1015,8 +1015,9 @@ sub make_columnname_method {
          my $value = shift;
          $self->_modified(1);
          $self->_checked(0);
-         $self->_content_into_objs({ $method => $value });
-         $self->{'content'}->{$method} = $value;
+         my $c = { $method => $value };
+         $self->_content_into_objs($c);
+         $self->{'content'}->{$method} = $c->{$method};
          unless (grep { $_ eq $method } @{$self->_lazy}) {
              push @{$self->_lazy}, $method;
          }
