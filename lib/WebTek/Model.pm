@@ -16,6 +16,7 @@ use WebTek::Config qw( config );
 use WebTek::Exception;
 use WebTek::Data::Date qw( date );
 use WebTek::Data::Struct  qw( struct );
+use WebTek::Data::GeoJSON  qw( geojson );
 use WebTek::Model::Mysql;
 use WebTek::Model::Oracle;
 use WebTek::Model::Postgres;
@@ -581,7 +582,7 @@ sub _content_into_objs {
       } elsif ($data_type == DATA_TYPE_JSON) {
          $content->{$name} = struct($value);
       } elsif ($data_type == DATA_TYPE_GEOJSON) {
-         $content->{$name} = struct($value);
+         $content->{$name} = geojson($value);
       } elsif ($data_type == DATA_TYPE_PERL) {
          $content->{$name} = struct($value, 'perl');
       } elsif ($data_type == DATA_TYPE_NUMBER) {
@@ -633,7 +634,9 @@ sub _prepare_params {
    my $params = shift;     # hashref
    
    my $f_keys = {};
-   while (my ($key, $value) = each(%$params)) {
+   my @keys = keys %$params;
+   foreach my $key (@keys) {
+      my $value = $params->{$key};
       #... translate objects to db-columns
       if (my $ref = ref $value) {
          if ($ref =~ /^WebTek::Data::/) {
