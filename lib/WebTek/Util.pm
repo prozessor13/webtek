@@ -8,7 +8,6 @@ package WebTek::Util;
 
 use IO::Socket::INET;
 use WebTek::Exception;
-use Sub::Identify qw( sub_name );
 use WebTek::Attributes qw( MODIFY_CODE_ATTRIBUTES );
 use WebTek::Export qw( r stash slurp assert make_method make_accessor );
 
@@ -118,9 +117,11 @@ sub make_accessor {
 
 sub subname_for_coderef {
    my ($class, $coderef) = @_;
-   
-   my $name = sub_name $coderef;
-   return $name eq '__ANON__' ? undef : $name;
+
+   foreach my $sub (values %{"$class\::"}) {
+      return *$sub{NAME} if *$sub{CODE} eq $coderef
+   }
+   return undef;
 }
 
 1;

@@ -196,7 +196,7 @@ sub to_perl {  # converts an array (from the template method) to perlcode
             }
             $macro = "( $if ? $macro : undef )" if defined $if;
             $macro = "( $unless ? undef : $macro )" if defined $unless;
-            $macro = "( eval { $macro } )" if $silent;
+            $macro = "( eval { $macro } || undef )" if $silent;
 
             push @code, $macro;
          }

@@ -165,11 +165,11 @@ sub do_query {
    return $result;
 }
 
-sub commit { shift->dbh->commit }
+sub commit { $_[0]->dbh->commit unless $_[0]->dbh->{AutoCommit} }
 
 sub commit_all { $_->commit foreach values %{$DB{app->name}} };
 
-sub rollback { shift->dbh->rollback }
+sub rollback { $_[0]->dbh->rollback unless $_[0]->dbh->{AutoCommit} }
 
 sub rollback_all { $_->rollback foreach values %{$DB{app->name}} };
 
