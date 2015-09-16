@@ -52,6 +52,19 @@ sub geometry {
       return $db->do_query(qq{
          select ST_GeomFromText('POINT($lng $lat)', 4326) as geom
       })->[0]{geom};
+   } elsif ($geo->{type} eq 'MultiPolygon') {
+      my @polygons;
+      foreach my $p (@{$geo->{coordinates}}) {
+         my @pp = map {
+            my $r = $_;
+            "(" . join(', ', map("@$_", @$r)) . ")";
+         } @$p;
+         push @polygons, "(" . join(', ', @pp) . ")";
+      }
+      my $multipolygon = join ', ', @polygons;
+      return $db->do_query(qq{
+         select ST_GeomFromText('MULTIPOLYGON($multipolygon)', 4326) as geom
+      })->[0]{geom};
    } else {
       throw "Geometry $geo->{type} is not supported!";
    }
