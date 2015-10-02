@@ -1075,7 +1075,7 @@ sub to_hash {
       my $content = $self->{'content'}->{$name};
       $hash->{$name} = encode_utf8(
          ref($content) =~ /^WebTek::Data/
-            ? ($c->{type} == DATA_TYPE_GEOJSON)
+            ? ($c->{'webtek-data-type'} == DATA_TYPE_GEOJSON)
                ? $content->to_string
                : $content->to_db($self->_db)
             : defined $content ? $content : ''
