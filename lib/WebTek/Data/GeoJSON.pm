@@ -47,27 +47,7 @@ sub to_db {
 sub geometry {
    my ($self, $db, $geo) = @_;
 
-   if ($geo->{type} eq 'Point') {
-      my ($lng, $lat) = @{$geo->{coordinates}};
-      return $db->do_query(qq{
-         select ST_GeomFromText('POINT($lng $lat)', 4326) as geom
-      })->[0]{geom};
-   } elsif ($geo->{type} eq 'MultiPolygon') {
-      my @polygons;
-      foreach my $p (@{$geo->{coordinates}}) {
-         my @pp = map {
-            my $r = $_;
-            "(" . join(', ', map("@$_", @$r)) . ")";
-         } @$p;
-         push @polygons, "(" . join(', ', @pp) . ")";
-      }
-      my $multipolygon = join ', ', @polygons;
-      return $db->do_query(qq{
-         select ST_GeomFromText('MULTIPOLYGON($multipolygon)', 4326) as geom
-      })->[0]{geom};
-   } else {
-      throw "Geometry $geo->{type} is not supported!";
-   }
+   return $db->do_query("select ST_Force2D(ST_GeomFromGeoJSON('$geo')) as geom")->[0]{geom};
 }
 
 1;

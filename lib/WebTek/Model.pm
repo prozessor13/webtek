@@ -354,6 +354,7 @@ sub _init {
 sub find_one {
    my $class = shift;
    my %params = ref $_[0] ? %{$_[0]} : @_;
+   $params{limit} = 1;
 
    my $obj = $class->get_from_cache(%params);
    unless ($obj) {
@@ -1026,7 +1027,7 @@ sub make_columnname_method {
       }
       return $self->{'content'}->{$method};
    };
-   WebTek::Util::make_method($class, $method, $sub, @attrs);
+   WebTek::Util::may_make_method($class, $method, $sub, @attrs);
 }
 
 sub make_has_a_method {

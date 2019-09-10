@@ -153,7 +153,7 @@ sub load_perl_modules {
    }
    #... (safe) load modules
    foreach my $module (keys %modules) {
-      eval { WebTek::Module->require($module) };
+      eval { WebTek::Module->load($module) };
       if (my $e = $@) { $safe ? log_error($e) : log_fatal($e) }
    }
 }

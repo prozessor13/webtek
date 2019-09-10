@@ -42,12 +42,21 @@ sub _columns {
          $column->{'fetch'} = "ST_ASGeoJSON($name) as $name";         
       }
    
-      #... find default-value
-      $column->{'default'} = $column->{'default'} =~ /'(.*)'::\w/
-         ? $1
-         : $column->{'default'};
+      #... find serials
+      if ($column->{'default'} =~ /^nextval\(/) {
+         $column->{'sequence'} = delete $column->{'default'};
+      }
    }
    $class->SUPER::_columns($columns);
+}
+
+sub _get_next_id {
+   my $class = shift;
+
+   my ($id) = grep $_->{name} eq 'id', @{$class->columns};
+   return $id && $id->{sequence}
+      ? $class->_db->do_query("select $id->{sequence} as nv")->[0]{nv}
+      : undef;
 }
 
 1;

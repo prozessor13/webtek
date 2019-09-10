@@ -78,12 +78,17 @@ sub config { WebTek::Config::config($_[0]->{'config'}) }
 sub connect {
    my $self = shift;
 
-   my $dbh = DBI->connect_cached(
-      $self->config->{'connect'},
-      $self->config->{'username'},
-      $self->config->{'password'}
-   ) or throw "DB: cannot connect to database: " . $DBI::errstr;
-   return $dbh;
+   while (1) {
+      my $dbh = eval { DBI->connect(
+         $self->config->{'connect'},
+         $self->config->{'username'},
+         $self->config->{'password'}
+      ) };
+      return $dbh if $dbh;
+      log_warning "DB: cannot connect to database: " . $DBI::errstr;
+      log_warning "retry in 1 second";
+      sleep 1;
+   }
 }
 
 sub ping {
@@ -92,7 +97,7 @@ sub ping {
    return 0 unless $self->{'dbh'};
    return 1 if ($self->{'last-ping-time'} + PING_INTERVAL) > time;
    $self->{'last-ping-time'} = time;
-   return $self->{'dbh'}->ping;
+   return eval { $self->{'dbh'}->selectrow_array("SELECT now()") };
 }
 
 sub dbh {
@@ -126,9 +131,7 @@ sub vendor {
 sub do_prepare {
    my ($self, $sql) = @_;
    
-   my $sth = $self->config->{'cache-prepare'}
-      ? $self->dbh->prepare_cached($sql)
-      : $self->dbh->prepare($sql);
+   my $sth = $self->dbh->prepare($sql);
    return $sth or log_fatal "error in prepare $sql";
 }
 
