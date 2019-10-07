@@ -240,7 +240,7 @@ sub new_default {
          }
       } elsif ($n eq 'class') {
          $content{$n} = $class;
-      } elsif (exists $column->{'default'}) {
+      } elsif (defined $column->{'default'}) {
          $content{$n} = $column->{'default'}
       }
    }
