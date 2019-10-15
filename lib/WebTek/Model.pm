@@ -530,12 +530,9 @@ sub _fetch {
    my $self = shift;
    my $class = ref $self;
 
-   #... get primary keys
-   my %params = map {
-      WebTek::Exception->throw("$class->_fetch: primary-key '$_' don't exist!")
-         unless exists $self->{'content'}->{$_};      
-      $_ => $self->{'content'}->{$_};
-   } @{$self->primary_keys};
+   #... check primary keys
+   return if grep $_, map { not $self->{'content'}->{$_} } @{$self->primary_keys};
+   my %params = map { $_ => $self->{'content'}->{$_} } @{$self->primary_keys};
    
    #... get obj
    my $obj = $class->find_one(%params) or WebTek::Exception->
