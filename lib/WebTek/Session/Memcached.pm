@@ -17,6 +17,11 @@ make_accessor('ip_address', 'Macro');
 
 sub _init { }
 
+sub _cache {
+   my $config = config->{'session'}->{'cache-config'};
+   return cache($config);
+}
+
 sub new {
    my ($class, %params) = @_;
    
@@ -32,7 +37,7 @@ sub find_one {
    my ($self, %params) = @_;
    
    my $key = WebTek::Cache::key($params{'id'}, $params{'ip_address'});
-   return cache->get($key);
+   return $self->_cache->get($key);
 }
 
 sub save {
@@ -40,7 +45,7 @@ sub save {
    
    my $time = config->{'session'}->{'expiry-time'};
    my $key = WebTek::Cache::key($self->id, $self->ip_address);
-   cache->set($key, $self, $time);
+   $self->_cache->set($key, $self, $time);
 }
 
 1;

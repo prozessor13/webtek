@@ -34,7 +34,8 @@ sub prepare {
    my $req = Apache2::Request->new(r, %config);
 
    request->hostname(r->hostname);
-   request->remote_ip(r->connection->client_ip);
+   #request->remote_ip(r->connection->client_ip);
+   request->remote_ip(r->headers_in->{'X-Real-IP'});
    request->method(uc(r->method));
    request->headers(r->headers_in);
    request->user(r->user);
